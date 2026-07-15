@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GreenSound 문제 원인 분석 통합 대시보드</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --ink: #17202a;
+    --muted: #667085;
+    --line: #d9dee7;
+    --dark: #1f2937;
+    --navy: #24364b;
+    --blue: #2f6fed;
+    --blue-soft: #eaf1ff;
+    --red: #d92d20;
+    --red-soft: #fff1f0;
+    --amber: #b76e00;
+    --amber-soft: #fff7e6;
+    --green: #067647;
+    --green-soft: #e9f8ef;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+    letter-spacing: -0.02em;
+  }
+  header {
+    background: #111827;
+    color: white;
+    padding: 34px 40px 28px;
+    border-bottom: 4px solid #334155;
+  }
+  .header-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-end;
+  }
+  h1 { margin: 0 0 10px; font-size: 28px; letter-spacing: -0.04em; }
+  .subtitle { margin: 0; color: #cbd5e1; line-height: 1.6; font-size: 14px; }
+  .period {
+    padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    color: #e5e7eb;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(244, 246, 248, .94);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1440px; margin: 0 auto; padding: 10px 28px;
+    display: flex; gap: 8px; overflow-x: auto;
+  }
+  .nav-inner a {
+    text-decoration: none;
+    color: #475467;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 9px 14px;
+    font-weight: 800;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  main { max-width: 1440px; margin: 0 auto; padding: 24px 28px 72px; }
+  .section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, .04);
+  }
+  .section-title {
+    display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 16px;
+  }
+  h2 { margin: 0; font-size: 22px; letter-spacing: -0.04em; }
+  h3 { margin: 0 0 12px; font-size: 17px; letter-spacing: -0.03em; }
+  .desc { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+  .grid { display: grid; gap: 14px; }
+  .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-bottom: 18px; }
+  .kpi {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 16px;
+  }
+  .kpi .label { color: var(--muted); font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+  .kpi .value { font-size: 22px; font-weight: 900; letter-spacing: -0.04em; }
+  .kpi .note { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.45; }
+  .kpi.danger { border-color: #fecaca; background: #fffafa; }
+  .kpi.danger .value { color: var(--red); }
+  .flow {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+  }
+  .flow-step {
+    border: 1px solid var(--line);
+    background: #fafbfc;
+    border-radius: 13px;
+    padding: 16px;
+    position: relative;
+  }
+  .flow-step strong { display:block; margin-bottom: 7px; font-size: 14px; }
+  .flow-step p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .flow-step.highlight { border-color: #fca5a5; background: #fff7f7; }
+  .cols2 { grid-template-columns: 1.05fr .95fr; align-items: start; }
+  .cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 980px; background: white; }
+  th, td {
+    border-bottom: 1px solid #edf0f5;
+    padding: 10px 11px;
+    text-align: right;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  th {
+    background: #f8fafc;
+    color: #344054;
+    font-size: 12px;
+    font-weight: 900;
+    position: sticky; top: 0; z-index: 1;
+  }
+  td:first-child, th:first-child, td:nth-child(2), th:nth-child(2) { text-align: left; }
+  td span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .focus-row td { background: #fff7f7; }
+  .badge {
+    display: inline-flex; align-items:center; justify-content:center;
+    padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 900;
+  }
+  .badge.danger { background: var(--red-soft); color: #b42318; }
+  .badge.warn { background: var(--amber-soft); color: #a15c00; }
+  .badge.info { background: var(--blue-soft); color: #1d4ed8; }
+  .barcell {
+    position: relative;
+    min-width: 92px;
+    height: 24px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+  .barcell i {
+    position: absolute; inset: 0 auto 0 0; background: #c7d7f8; border-radius: 999px;
+  }
+  .barcell b {
+    position: relative; z-index: 1; padding: 3px 9px; display: block; text-align: right;
+  }
+  .rankbars { display: grid; gap: 9px; }
+  .rankbar {
+    display: grid; grid-template-columns: 148px 1fr; align-items: center; gap: 12px;
+    padding: 9px 0; border-bottom: 1px solid #eef1f6;
+  }
+  .rankbar:last-child { border-bottom: 0; }
+  .rankbar .rank-meta strong { display: block; font-size: 13px; }
+  .rankbar .rank-meta span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .rankbar .barwrap { height: 16px; background: #edf2f7; border-radius: 999px; overflow: hidden; }
+  .rankbar .barwrap i { display:block; height:100%; background:#9db8f4; border-radius:999px; }
+  .rankbar.active .barwrap i { background: var(--red); }
+  .callout {
+    border-left: 5px solid var(--red);
+    background: var(--red-soft);
+    padding: 16px 18px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .callout strong { display: block; margin-bottom: 6px; color: #912018; }
+  .callout p { margin: 0; color: #7a271a; line-height: 1.65; font-size: 14px; }
+  .insight-card {
+    border: 1px solid var(--line);
+    background: #fcfcfd;
+    border-radius: 13px;
+    padding: 16px;
+  }
+  .insight-card .tag {
+    display:inline-block; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #344054;
+    font-size: 11px; font-weight: 900; margin-bottom: 10px;
+  }
+  .insight-card h4 { margin: 0 0 8px; font-size: 16px; }
+  .insight-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+  .note-box {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #475467;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decision {
+    display: grid; grid-template-columns: 150px 1fr 1fr; gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .decision div { padding: 14px; border-bottom: 1px solid #edf0f5; background: white; }
+  .decision div:nth-child(-n+3) { background: #f8fafc; font-weight: 900; }
+  .decision div:nth-last-child(-n+3) { border-bottom: 0; }
+  .foot {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 16px;
+  }
+  @media(max-width:1100px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .flow, .cols2, .cols3 { grid-template-columns: 1fr; }
+    .header-inner { align-items: flex-start; flex-direction: column; }
+  }
+  @media(max-width:720px) {
+    header { padding: 24px; }
+    main { padding: 18px; }
+    .kpis { grid-template-columns: 1fr; }
+    .section { padding: 16px; }
+    .rankbar { grid-template-columns: 1fr; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>GreenSound 문제 원인 분석 통합 대시보드</h1>
+      <p class="subtitle">전체 제품 비교 후 눈에 띄는 제품을 선정하고, 고객 체감 이슈·반품 손실·위탁사 품질을 연결해 원인 후보를 확인합니다.</p>
+    </div>
+    <div class="period">2025.07 ~ 2026.06 분석 보고용</div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#summary">1. 분석 결론</a>
+    <a href="#all-products">2. 전체 제품 비교</a>
+    <a href="#tws300">3. TWS-300 심층</a>
+    <a href="#vendor">4. 위탁사 품질</a>
+    <a href="#action">5. 개선 과제</a>
+  </div>
+</nav>
+
+<main>
+  <section class="section" id="summary">
+    <div class="section-title">
+      <div>
+        <h2>1. 분석 결론</h2>
+        <p class="desc">특정 제품을 먼저 정해놓고 본 것이 아니라, 전체 제품 비교 결과에서 TWS-300이 가장 눈에 띄어 심층 확인 대상으로 선정했습니다.</p>
+      </div>
+    </div>
+    <div class="grid kpis">
+      <div class="kpi"><div class="label">전체 추정 매출액</div><div class="value">484,526,920원</div><div class="note">판매수량 × 평균판매단가</div></div>
+      <div class="kpi"><div class="label">전체 판매수량</div><div class="value">12,294개</div><div class="note">월별 판매 데이터 기준</div></div>
+      <div class="kpi"><div class="label">총 반품건수</div><div class="value">1,196건</div><div class="note">반품 검사 데이터 기준</div></div>
+      <div class="kpi danger"><div class="label">TWS-300 반품률</div><div class="value">14.18%</div><div class="note">전체 제품 중 최고</div></div>
+      <div class="kpi danger"><div class="label">TWS-300 손실처리</div><div class="value">128건</div><div class="note">리퍼+교환+폐기</div></div>
+      <div class="kpi"><div class="label">A정밀 입고 불량률</div><div class="value">2.23%</div><div class="note">3개 위탁처 중 최고</div></div>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step"><strong>① 전체 제품 비교</strong><p>판매, 반품률, 리뷰 불만, CS 문의를 함께 비교했습니다.</p></div>
+      <div class="flow-step highlight"><strong>② TWS-300 선정</strong><p>반품률 14.18%, 연결/페어링 리뷰 34건, CS 26건으로 가장 눈에 띕니다.</p></div>
+      <div class="flow-step"><strong>③ 손실 영향 확인</strong><p>TWS-300 × A정밀 조합에서 손실처리 128건이 확인됩니다.</p></div>
+      <div class="flow-step"><strong>④ 원인 후보 분리</strong><p>사용법·안내 이슈와 위탁사 품질 점검을 동시에 봐야 합니다.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="all-products">
+    <div class="section-title">
+      <div>
+        <h2>2. 전체 제품 비교</h2>
+        <p class="desc">리뷰·CS·반품을 전체 제품 기준으로 먼저 비교했습니다. 이 단계에서 TWS-300이 우선 확인 대상으로 도출됩니다.</p>
+      </div>
+    </div>
+    <div class="grid cols2">
+      <div>
+        <h3>제품별 반품률 및 고객 이슈 집중도</h3>
+        <div class="rankbars"><div class="rankbar active">
+      <div class="rank-meta"><strong>TWS-300</strong><span>14.18% · 고객이슈 60건</span></div>
+      <div class="barwrap"><i style="width:100.0%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>TWS-200</strong><span>8.91% · 고객이슈 27건</span></div>
+      <div class="barwrap"><i style="width:62.8%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>AIR-50</strong><span>9.51% · 고객이슈 23건</span></div>
+      <div class="barwrap"><i style="width:67.1%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>BONE-100</strong><span>10.32% · 고객이슈 31건</span></div>
+      <div class="barwrap"><i style="width:72.8%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>BONE-200</strong><span>7.20% · 고객이슈 19건</span></div>
+      <div class="barwrap"><i style="width:50.8%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>GH-90</strong><span>8.37% · 고객이슈 12건</span></div>
+      <div class="barwrap"><i style="width:59.0%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>BOOM-10</strong><span>6.96% · 고객이슈 18건</span></div>
+      <div class="barwrap"><i style="width:49.1%"></i></div>
+    </div>
+<div class="rankbar ">
+      <div class="rank-meta"><strong>SBAR-20</strong><span>8.99% · 고객이슈 15건</span></div>
+      <div class="barwrap"><i style="width:63.4%"></i></div>
+    </div></div>
+      </div>
+      <div class="note-box">
+        <strong>해석</strong><br>
+        TWS-300은 판매수량이 가장 많고 반품률도 가장 높습니다. 리뷰와 CS 모두 연결/페어링 이슈가 겹치므로,
+        단순 품질 불량만이 아니라 초기 사용법, 멀티포인트 안내, 반품 전 자가진단 절차까지 함께 확인해야 합니다.
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:18px">
+      <table>
+        <thead>
+          <tr>
+            <th>제품</th><th>판매수량</th><th>반품건수</th><th>반품률</th><th>리뷰/평점</th><th>리뷰 주요 불만</th><th>CS문의</th><th>CS 최다유형</th><th>판단</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr class="focus-row">
+        <td><strong>TWS-300</strong><span>완전무선 이어폰(멀티포인트)</span></td>
+        <td>2,249</td>
+        <td>319</td>
+        <td><div class="barcell"><b>14.18%</b><i style="width:100.0%"></i></div></td>
+        <td>107건 / 4.09</td>
+        <td>연결/페어링 34건</td>
+        <td>36건</td>
+        <td>페어링·연결 26건</td>
+        <td><span class="badge danger">우선 확인</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>TWS-200</strong><span>완전무선 이어폰</span></td>
+        <td>2,133</td>
+        <td>190</td>
+        <td><div class="barcell"><b>8.91%</b><i style="width:62.8%"></i></div></td>
+        <td>83건 / 4.41</td>
+        <td>연결/페어링 14건</td>
+        <td>31건</td>
+        <td>페어링·연결 13건</td>
+        <td><span class="badge danger">우선 확인</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>AIR-50</strong><span>공기전도 이어폰</span></td>
+        <td>1,820</td>
+        <td>173</td>
+        <td><div class="barcell"><b>9.51%</b><i style="width:67.1%"></i></div></td>
+        <td>79건 / 4.35</td>
+        <td>충전/배터리·배송/포장 14건</td>
+        <td>25건</td>
+        <td>페어링·연결 9건</td>
+        <td><span class="badge info">관찰</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>BONE-100</strong><span>골전도 이어폰</span></td>
+        <td>1,531</td>
+        <td>158</td>
+        <td><div class="barcell"><b>10.32%</b><i style="width:72.8%"></i></div></td>
+        <td>77건 / 4.56</td>
+        <td>음질/소리·착용감 15건</td>
+        <td>37건</td>
+        <td>A/S 문의 16건</td>
+        <td><span class="badge danger">우선 확인</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>BONE-200</strong><span>골전도 이어폰(방수)</span></td>
+        <td>1,333</td>
+        <td>96</td>
+        <td><div class="barcell"><b>7.20%</b><i style="width:50.8%"></i></div></td>
+        <td>51건 / 4.41</td>
+        <td>방수/오작동 11건</td>
+        <td>28건</td>
+        <td>A/S 문의 8건</td>
+        <td><span class="badge warn">관리 필요</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>GH-90</strong><span>게이밍 헤드셋</span></td>
+        <td>1,218</td>
+        <td>102</td>
+        <td><div class="barcell"><b>8.37%</b><i style="width:59.0%"></i></div></td>
+        <td>37건 / 4.51</td>
+        <td>음질/소리 5건</td>
+        <td>31건</td>
+        <td>A/S 문의 7건</td>
+        <td><span class="badge info">관찰</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>BOOM-10</strong><span>블루투스 스피커</span></td>
+        <td>1,120</td>
+        <td>78</td>
+        <td><div class="barcell"><b>6.96%</b><i style="width:49.1%"></i></div></td>
+        <td>33건 / 4.39</td>
+        <td>크기/공간 4건</td>
+        <td>35건</td>
+        <td>사용법·설정 14건</td>
+        <td><span class="badge warn">관리 필요</span></td>
+      </tr>
+
+      <tr class="">
+        <td><strong>SBAR-20</strong><span>사운드바</span></td>
+        <td>890</td>
+        <td>80</td>
+        <td><div class="barcell"><b>8.99%</b><i style="width:63.4%"></i></div></td>
+        <td>33건 / 4.39</td>
+        <td>연결/페어링 5건</td>
+        <td>31건</td>
+        <td>페어링·연결 10건</td>
+        <td><span class="badge danger">우선 확인</span></td>
+      </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="tws300">
+    <div class="section-title">
+      <div>
+        <h2>3. TWS-300 심층 분석</h2>
+        <p class="desc">전체 비교에서 TWS-300이 가장 눈에 띄었기 때문에, 고객 체감 이슈와 손실 처리 흐름을 별도로 확인했습니다.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>핵심 진단</strong>
+      <p>TWS-300은 반품률 14.18%, 리뷰 연결/페어링 34건, CS 페어링·연결 26건, 작동·연결 반품 134건이 함께 나타납니다. 손실처리건수도 128건으로 가장 커서 우선 점검 대상입니다.</p>
+    </div>
+
+    <div class="grid cols3">
+      <div class="insight-card"><span class="tag">고객 체감</span><h4>연결/페어링 이슈 반복</h4><p>리뷰와 CS 모두 연결/페어링으로 집중되어 고객이 실제 사용 초기에 어려움을 느꼈을 가능성이 큽니다.</p></div>
+      <div class="insight-card"><span class="tag">반품 손실</span><h4>손실처리 128건</h4><p>리퍼 전환, 교환 출고, 폐기로 이어진 처리 건수를 기준으로 보면 TWS-300의 비용 영향이 큽니다.</p></div>
+      <div class="insight-card"><span class="tag">원인 후보</span><h4>A정밀 생산 로트 집중</h4><p>문제 조합은 TWS-300 × A정밀입니다. 다만 제품 특성과 위탁처가 함께 묶여 있어 위탁처 단독 원인으로 단정하지 않습니다.</p></div>
+    </div>
+
+    <h3 style="margin-top:20px">손실 위험 로트 TOP 10</h3>
+    <p class="desc">손실 처리 건수는 리퍼 전환, 교환 출고, 폐기 건수를 합산한 값입니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>순위</th><th>모델코드</th><th>로트번호</th><th>위탁처</th><th>반품건수</th><th>주요 고객신고사유</th><th>손실 처리 건수</th><th>리퍼</th><th>교환</th><th>폐기</th>
+          </tr>
+        </thead>
+        <tbody><tr class="focus-row">
+      <td>1</td><td><strong>TWS-300</strong></td><td>L2602-A01</td><td>A정밀</td>
+      <td>71</td><td>작동·연결 불량 38건</td><td><strong>29</strong></td>
+      <td>19</td><td>5</td><td>5</td>
+    </tr>
+<tr class="focus-row">
+      <td>2</td><td><strong>TWS-300</strong></td><td>L2603-A01</td><td>A정밀</td>
+      <td>67</td><td>작동·연결 불량 32건</td><td><strong>28</strong></td>
+      <td>19</td><td>7</td><td>2</td>
+    </tr>
+<tr class="focus-row">
+      <td>3</td><td><strong>TWS-300</strong></td><td>L2604-A01</td><td>A정밀</td>
+      <td>48</td><td>작동·연결 불량 16건</td><td><strong>20</strong></td>
+      <td>14</td><td>5</td><td>1</td>
+    </tr>
+<tr class="focus-row">
+      <td>4</td><td><strong>TWS-300</strong></td><td>L2601-A01</td><td>A정밀</td>
+      <td>56</td><td>작동·연결 불량 25건</td><td><strong>19</strong></td>
+      <td>11</td><td>4</td><td>4</td>
+    </tr>
+<tr class="focus-row">
+      <td>5</td><td><strong>TWS-300</strong></td><td>L2605-A01</td><td>A정밀</td>
+      <td>24</td><td>파손·외관 불량 6건</td><td><strong>14</strong></td>
+      <td>9</td><td>1</td><td>4</td>
+    </tr>
+<tr class="focus-row">
+      <td>6</td><td><strong>TWS-300</strong></td><td>L2512-A01</td><td>A정밀</td>
+      <td>28</td><td>작동·연결 불량 9건</td><td><strong>12</strong></td>
+      <td>9</td><td>2</td><td>1</td>
+    </tr>
+<tr class="">
+      <td>7</td><td><strong>TWS-200</strong></td><td>L2511-A02</td><td>A정밀</td>
+      <td>27</td><td>단순변심 7건</td><td><strong>12</strong></td>
+      <td>7</td><td>2</td><td>3</td>
+    </tr>
+<tr class="">
+      <td>8</td><td><strong>BONE-100</strong></td><td>L2511-B04</td><td>B사운드</td>
+      <td>15</td><td>단순변심 4건</td><td><strong>12</strong></td>
+      <td>8</td><td>2</td><td>2</td>
+    </tr>
+<tr class="">
+      <td>9</td><td><strong>AIR-50</strong></td><td>L2511-B03</td><td>B사운드</td>
+      <td>19</td><td>단순변심 6건</td><td><strong>11</strong></td>
+      <td>8</td><td>2</td><td>1</td>
+    </tr>
+<tr class="">
+      <td>10</td><td><strong>AIR-50</strong></td><td>L2604-B03</td><td>B사운드</td>
+      <td>16</td><td>작동·연결 불량 6건</td><td><strong>11</strong></td>
+      <td>6</td><td>3</td><td>2</td>
+    </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="vendor">
+    <div class="section-title">
+      <div>
+        <h2>4. 위탁사 품질 및 문제 발생 위치</h2>
+        <p class="desc">로트번호는 위탁사와 연결되므로, 발표용 분석에서는 개별 로트보다 제품 × 위탁처 단위로 보는 것이 적절합니다.</p>
+      </div>
+    </div>
+
+    <h3>문제 발생 위치 요약</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>제품</th><th>위탁처</th><th>로트수</th><th>반품건수</th><th>주요 고객신고사유</th><th>손실처리건수</th><th>분석 포인트</th>
+          </tr>
+        </thead>
+        <tbody><tr class="focus-row">
+      <td><strong>TWS-300</strong><span>완전무선 이어폰(멀티포인트)</span></td>
+      <td>A정밀</td><td>10</td><td>319</td><td>작동·연결 불량 134건</td>
+      <td><strong>128</strong></td><td>반품·손실처리 모두 최상위, 작동·연결 이슈 집중</td>
+    </tr>
+<tr class="">
+      <td><strong>TWS-200</strong><span>완전무선 이어폰</span></td>
+      <td>A정밀</td><td>15</td><td>190</td><td>작동·연결 불량 57건</td>
+      <td><strong>91</strong></td><td>손실처리 규모가 높아 후속 점검 필요</td>
+    </tr>
+<tr class="">
+      <td><strong>BONE-100</strong><span>골전도 이어폰</span></td>
+      <td>B사운드</td><td>16</td><td>158</td><td>작동·연결 불량 40건</td>
+      <td><strong>88</strong></td><td>제품별 착용감·연결·단순변심 이슈 분리 필요</td>
+    </tr>
+<tr class="">
+      <td><strong>AIR-50</strong><span>공기전도 이어폰</span></td>
+      <td>B사운드</td><td>16</td><td>173</td><td>단순변심 49건</td>
+      <td><strong>82</strong></td><td>제품별 착용감·연결·단순변심 이슈 분리 필요</td>
+    </tr>
+<tr class="">
+      <td><strong>GH-90</strong><span>게이밍 헤드셋</span></td>
+      <td>C전자</td><td>16</td><td>102</td><td>작동·연결 불량 34건</td>
+      <td><strong>55</strong></td><td>반품 규모는 낮지만 폐기·리퍼 전환 여부 확인</td>
+    </tr>
+<tr class="">
+      <td><strong>BONE-200</strong><span>골전도 이어폰(방수)</span></td>
+      <td>B사운드</td><td>16</td><td>96</td><td>착용감·사이즈 22건</td>
+      <td><strong>46</strong></td><td>제품별 착용감·연결·단순변심 이슈 분리 필요</td>
+    </tr>
+<tr class="">
+      <td><strong>BOOM-10</strong><span>블루투스 스피커</span></td>
+      <td>C전자</td><td>15</td><td>78</td><td>작동·연결 불량 27건</td>
+      <td><strong>38</strong></td><td>반품 규모는 낮지만 폐기·리퍼 전환 여부 확인</td>
+    </tr>
+<tr class="">
+      <td><strong>SBAR-20</strong><span>사운드바</span></td>
+      <td>C전자</td><td>14</td><td>80</td><td>단순변심 30건</td>
+      <td><strong>32</strong></td><td>반품 규모는 낮지만 폐기·리퍼 전환 여부 확인</td>
+    </tr></tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:20px">위탁처별 입고 품질</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>위탁처</th><th>로트수</th><th>최종 불합격 로트</th><th>최종 불합격 비중</th><th>검사수량</th><th>불량수량</th><th>입고 불량률</th><th>불합격률</th><th>TOP 1</th><th>TOP 2</th><th>TOP 3</th>
+          </tr>
+        </thead>
+        <tbody><tr class="focus-row">
+      <td><strong>A정밀</strong></td><td>22</td><td>4개</td><td>18.2%</td>
+      <td>5,600</td><td>125</td><td><strong>2.23%</strong></td><td>14.75%</td>
+      <td>페어링모듈 64건 (51.2%)</td><td>배터리 39건 (31.2%)</td><td>납땜불량 9건 (7.2%)</td>
+    </tr>
+<tr class="">
+      <td><strong>B사운드</strong></td><td>36</td><td>1개</td><td>2.8%</td>
+      <td>12,750</td><td>229</td><td><strong>1.80%</strong></td><td>4.17%</td>
+      <td>페어링모듈 82건 (35.8%)</td><td>배터리 53건 (23.1%)</td><td>납땜불량 45건 (19.7%)</td>
+    </tr>
+<tr class="">
+      <td><strong>C전자</strong></td><td>36</td><td>0개</td><td>0.0%</td>
+      <td>13,250</td><td>204</td><td><strong>1.54%</strong></td><td>0.84%</td>
+      <td>납땜불량 82건 (40.2%)</td><td>배터리 37건 (18.1%)</td><td>페어링모듈 36건 (17.6%)</td>
+    </tr></tbody>
+      </table>
+    </div>
+
+    <div class="note-box" style="margin-top:16px">
+      <strong>해석 주의</strong><br>
+      A정밀은 입고 불량률과 최종 불합격 로트 비중이 높게 나타나지만, TWS 계열 생산분이 A정밀에 집중되어 있습니다.
+      따라서 “A정밀 자체가 문제”라고 단정하기보다, TWS 계열 생산 로트와 페어링모듈·배터리 관련 공정 점검이 필요하다고 해석하는 것이 안전합니다.
+    </div>
+  </section>
+
+  <section class="section" id="action">
+    <div class="section-title">
+      <div>
+        <h2>5. 개선 과제</h2>
+        <p class="desc">손실을 줄이기 위해서는 고객 안내 개선과 품질 점검을 동시에 진행하는 것이 적절합니다.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div>영역</div><div>확인된 문제</div><div>권장 조치</div>
+      <div><strong>상세페이지·콘텐츠</strong></div><div>TWS-300 연결/페어링 불만이 리뷰와 CS에서 반복</div><div>멀티포인트 연결법, 초기화 방법, 한쪽만 들릴 때 조치법을 상세페이지 상단과 FAQ에 배치</div>
+      <div><strong>CS·운영</strong></div><div>페어링 문의와 반품이 동시에 발생</div><div>반품 접수 전 30초 자가진단 안내, 페어링/리셋 안내 매크로 운영</div>
+      <div><strong>품질·위탁사</strong></div><div>TWS-300 × A정밀 생산 로트에서 손실처리 집중</div><div>A정밀 TWS 계열 로트의 페어링모듈·배터리 공정 점검, 불합격 로트 후속 확인</div>
+      <div><strong>데이터 관리</strong></div><div>리뷰·CS·반품이 고객ID/주문번호로 직접 연결되지 않음</div><div>주문ID 또는 고객 문의ID를 기준으로 리뷰, CS, 반품을 연결할 수 있는 관리 컬럼 추가</div>
+    </div>
+
+    <p class="foot">
+      분석 기준: 리뷰/CS는 고객 체감 문제 확인용, 반품·처리결과는 손실 영향 확인용, 입고검사·불량상세는 위탁사 품질 점검용으로 분리했습니다.
+      실제 손실금액은 원가·배송비·리퍼 비용 데이터가 없으므로, 본 대시보드는 손실 처리 건수를 기준으로 우선순위를 제시합니다.
+    </p>
+  </section>
+</main>
+</body>
+</html>

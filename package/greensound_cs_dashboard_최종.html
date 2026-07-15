@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GreenSound CS 문의 분석 대시보드</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        --primary: #2563eb;
+        --primary2: #60a5fa;
+        --good: #059669;
+        --warn: #d97706;
+        --bad: #dc2626;
+        --dark: #111827;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard",
+          "Noto Sans KR", Arial, sans-serif;
+        color: var(--text);
+        line-height: 1.55;
+      }
+      .header {
+        background: linear-gradient(135deg, #111827, #1d4ed8);
+        color: white;
+        padding: 38px 44px 30px;
+        border-bottom-left-radius: 30px;
+        border-bottom-right-radius: 30px;
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 32px;
+        letter-spacing: -0.8px;
+      }
+      .header p {
+        margin: 10px 0 0;
+        color: #dbeafe;
+        font-size: 15px;
+      }
+      .wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      .kpis {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: -15px;
+      }
+      .kpi {
+        background: var(--card);
+        border: 1px solid rgba(229, 231, 235, 0.9);
+        border-radius: 18px;
+        padding: 18px 18px 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+      .kpi-title {
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .kpi-value {
+        font-size: 30px;
+        font-weight: 850;
+        letter-spacing: -0.8px;
+        margin-top: 5px;
+        color: var(--dark);
+      }
+      .kpi-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .blue .kpi-value {
+        color: var(--primary);
+      }
+      .green .kpi-value {
+        color: var(--good);
+      }
+      .orange .kpi-value {
+        color: var(--warn);
+      }
+      .red .kpi-value {
+        color: var(--bad);
+      }
+      .tabs {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 22px 0 4px;
+        background: #eaf1fb;
+        border: 1px solid #dbeafe;
+        border-radius: 18px;
+        padding: 8px;
+        position: sticky;
+        top: 10px;
+        z-index: 10;
+        backdrop-filter: blur(8px);
+      }
+      .tab-btn {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: #475569;
+        font-weight: 800;
+        font-size: 14px;
+        padding: 12px 18px;
+        border-radius: 13px;
+        cursor: pointer;
+        transition: 0.18s ease;
+        white-space: nowrap;
+      }
+      .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.65);
+        color: #1d4ed8;
+      }
+      .tab-btn.active {
+        background: #fff;
+        color: #1d4ed8;
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.16);
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+      .tab-help {
+        margin: 8px 2px 0;
+        color: #64748b;
+        font-size: 12px;
+      }
+      .section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 24px;
+        margin-top: 20px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+      }
+      .section h2 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        letter-spacing: -0.5px;
+      }
+      .section .desc {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .cols2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .cols3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      th {
+        background: #f8fafc;
+        color: #475569;
+        text-align: left;
+        font-size: 12px;
+        padding: 10px 9px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      td {
+        padding: 9px;
+        border-bottom: 1px solid #eef2f7;
+        vertical-align: middle;
+      }
+      tbody tr:hover {
+        background: #f8fbff;
+      }
+      .table-scroll {
+        overflow: auto;
+        border-radius: 14px;
+      }
+      .note,
+      .warnbox {
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-size: 14px;
+      }
+      .note {
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        color: #475569;
+      }
+      .warnbox {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+      }
+      .mini-card,
+      .strategy-card,
+      .risk-card {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      .mini-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+      .mini-title b {
+        font-size: 14px;
+        color: #1f2937;
+      }
+      .mini-title span {
+        font-size: 12px;
+        font-weight: 800;
+        color: #2563eb;
+        background: #dbeafe;
+        border-radius: 999px;
+        padding: 3px 8px;
+      }
+      .mini-card ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        color: #475569;
+        font-size: 13px;
+      }
+      .mini-card li {
+        margin: 4px 0;
+      }
+      .strategy-card b,
+      .risk-card b {
+        font-size: 15px;
+        color: #1f2937;
+      }
+      .strategy-card .tagline {
+        margin: 5px 0;
+        color: #2563eb;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .strategy-card p,
+      .risk-card p {
+        margin: 6px 0 0;
+        color: #475569;
+        font-size: 13px;
+      }
+      .risk-card > div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .risk-card span {
+        font-size: 12px;
+        font-weight: 900;
+        color: #dc2626;
+        background: #fee2e2;
+        border-radius: 999px;
+        padding: 4px 8px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        background: #dbeafe;
+        color: #1d4ed8;
+        margin-left: 6px;
+      }
+      .summary-list {
+        display: grid;
+        gap: 10px;
+      }
+      .summary-list .item {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+      .item b {
+        color: #111827;
+      }
+      .item p {
+        margin: 4px 0 0;
+        color: #475569;
+        font-size: 13px;
+      }
+      .full-block {
+        width: 100%;
+        margin-top: 6px;
+      }
+      .full-block table {
+        min-width: 0;
+      }
+      .subhead-gap {
+        margin-top: 28px;
+      }
+      .insight-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .insight-grid .item {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 14px 16px;
+      }
+      .insight-grid .item b {
+        color: #111827;
+      }
+      .insight-grid .item p {
+        margin: 5px 0 0;
+        color: #475569;
+        font-size: 13px;
+      }
+      .full-warning {
+        width: 100%;
+        margin-top: 38px;
+        display: block;
+      }
+      .missing-section h3,
+      .model-summary-section h3 {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+      .model-cards .item b {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .model-cards .item span {
+        font-size: 12px;
+        font-weight: 900;
+        color: #2563eb;
+        background: #dbeafe;
+        border-radius: 999px;
+        padding: 3px 8px;
+        white-space: nowrap;
+      }
+      .channel-section h3,
+      .category-section h3 {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+      .channel-cards .item b {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .channel-cards .item span {
+        font-size: 12px;
+        font-weight: 900;
+        color: #2563eb;
+        background: #dbeafe;
+        border-radius: 999px;
+        padding: 3px 8px;
+        white-space: nowrap;
+      }
+      .channel-cards .item p strong {
+        color: #111827;
+      }
+
+      .footer {
+        color: #64748b;
+        font-size: 12px;
+        text-align: center;
+        padding: 24px;
+      }
+      @media (max-width: 900px) {
+        .kpis,
+        .cols2,
+        .cols3,
+        .insight-grid {
+          grid-template-columns: 1fr;
+        }
+        .header {
+          padding: 28px 24px;
+        }
+        .wrap {
+          padding: 18px;
+        }
+        .tabs {
+          overflow-x: auto;
+          position: static;
+        }
+        .tab-btn {
+          flex: 1;
+          min-width: 120px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>GreenSound CS 문의 분석 대시보드</h1>
+      <p>
+        파일: greensound_cs_log_1yr.csv · 고객 문의 300건 기준 · 모델 미기재는
+        별도 분리
+      </p>
+    </header>
+    <main class="wrap">
+      <div class="grid kpis">
+        <div class="kpi blue">
+          <div class="kpi-title">전체 문의 수</div>
+          <div class="kpi-value">300건</div>
+          <div class="kpi-sub">CS 로그 전체 행 기준</div>
+        </div>
+        <div class="kpi green">
+          <div class="kpi-title">모델코드 기재</div>
+          <div class="kpi-value">254건</div>
+          <div class="kpi-sub">모델 분석 기준</div>
+        </div>
+        <div class="kpi orange">
+          <div class="kpi-title">모델코드 미기재</div>
+          <div class="kpi-value">46건</div>
+          <div class="kpi-sub">전체 대비 15.3%</div>
+        </div>
+        <div class="kpi red">
+          <div class="kpi-title">핵심 특이사항</div>
+          <div class="kpi-value">118건</div>
+          <div class="kpi-sub">재문의·회신 대기·안내/처리 완료 기준</div>
+        </div>
+      </div>
+      <nav class="tabs" aria-label="대시보드 탭">
+        <button class="tab-btn active" data-tab="model" type="button">
+          모델 분석</button
+        ><button class="tab-btn" data-tab="channel" type="button">
+          채널 분석</button
+        ><button class="tab-btn" data-tab="special" type="button">
+          특이사항 분석
+        </button>
+      </nav>
+      <p class="tab-help">
+        표는 건수 확인용, 오른쪽 카드는 해석과 관리 포인트 중심으로
+        구성했습니다.
+      </p>
+
+      <div id="model" class="tab-panel active">
+        <section class="section category-section">
+          <h2>0. 문의 카테고리 기준표</h2>
+          <p class="desc">
+            대시보드에서 사용하는 문의유형 기준입니다. 아래 분류는 CS 로그의
+            <b>문의유형</b> 컬럼 값을 기준으로 정리했습니다.
+          </p>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>문의 카테고리</th>
+                  <th>뜻</th>
+                  <th>주요 내용 예시</th>
+                  <th>분석 시 유의점</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>페어링·연결</td>
+                  <td>기기 연결, 블루투스 페어링 관련 문의</td>
+                  <td>
+                    연결 안 됨, 한쪽만 소리 남, 새 기기 연결, 블루투스 목록
+                    미노출
+                  </td>
+                  <td>
+                    제품 문제일 수도 있지만 초기 설정/사용법 이슈일 수도 있음
+                  </td>
+                </tr>
+                <tr>
+                  <td>사용법·설정</td>
+                  <td>제품 조작법, 설정 방법, 기능 사용 범위 문의</td>
+                  <td>
+                    전원 끄는 법, 볼륨 조절, LED 의미, 방수 등급, 멀티포인트
+                    사용법
+                  </td>
+                  <td>FAQ·매뉴얼 보강 대상으로 보기 좋음</td>
+                </tr>
+                <tr>
+                  <td>배송 문의</td>
+                  <td>배송 상태, 배송지, 송장 관련 문의</td>
+                  <td>배송 예정일, 배송 지연, 배송지 변경, 송장 조회 불가</td>
+                  <td>제품 품질 문제보다는 주문/물류 운영 이슈에 가까움</td>
+                </tr>
+                <tr>
+                  <td>반품·교환 요청</td>
+                  <td>반품, 교환, 환불, 수거 관련 문의</td>
+                  <td>
+                    반품 배송비, 수거 일정, 환불 시점, 단순변심 반품, 불량 의심
+                    교환
+                  </td>
+                  <td>
+                    실제 불량 여부는 반품/검수 결과 데이터가 있어야 확인 가능
+                  </td>
+                </tr>
+                <tr>
+                  <td>A/S 문의</td>
+                  <td>수리, 보증, 부품, 사후지원 관련 문의</td>
+                  <td>
+                    수리 기간, 유상수리 비용, 보증기간, 부품 단품 구매, 보증서
+                    분실
+                  </td>
+                  <td>실제 품질 문제로 확정하려면 A/S 판정 데이터가 필요함</td>
+                </tr>
+                <tr>
+                  <td>기타</td>
+                  <td>위 분류에 직접 포함되지 않는 운영성 문의</td>
+                  <td>리뷰 이벤트, 재입고 일정, 대량 구매 견적, 사은품 누락</td>
+                  <td>
+                    기타 안에서도 이벤트/재고/B2B/프로모션으로 세분화 가능
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="warnbox full-warning">
+            <b>주의</b><br />이 기준표는 파일 내 문의유형 컬럼과 문의요약 내용을
+            바탕으로 이해를 돕기 위해 정리한 것입니다. 실제 고객 의도나 최종
+            처리 결과는 별도 처리상태, 상담 이력, 반품·검수 데이터가 있어야
+            확정할 수 있습니다.
+          </div>
+        </section>
+        <section class="section model-summary-section">
+          <h2>
+            1. 모델코드별 문의 유형 분석 <span class="badge">미기재 제외</span>
+          </h2>
+          <p class="desc">
+            모델코드가 기재된 254건 기준입니다. 표는 전체 너비로 두고, 아래에는
+            모델별 대표 문의요약을 카드형으로 분리했습니다.
+          </p>
+
+          <div class="full-block">
+            <h3>모델별 최다 문의유형 표</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>모델코드</th>
+                    <th>총 문의</th>
+                    <th>최다 문의유형</th>
+                    <th>건수</th>
+                    <th>비율</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>BONE-100</td>
+                    <td>37</td>
+                    <td>A/S 문의</td>
+                    <td>16</td>
+                    <td>43.2%</td>
+                  </tr>
+                  <tr>
+                    <td>TWS-300</td>
+                    <td>36</td>
+                    <td>페어링·연결</td>
+                    <td>26</td>
+                    <td>72.2%</td>
+                  </tr>
+                  <tr>
+                    <td>BOOM-10</td>
+                    <td>35</td>
+                    <td>사용법·설정</td>
+                    <td>14</td>
+                    <td>40.0%</td>
+                  </tr>
+                  <tr>
+                    <td>GH-90</td>
+                    <td>31</td>
+                    <td>A/S 문의</td>
+                    <td>7</td>
+                    <td>22.6%</td>
+                  </tr>
+                  <tr>
+                    <td>SBAR-20</td>
+                    <td>31</td>
+                    <td>페어링·연결</td>
+                    <td>10</td>
+                    <td>32.3%</td>
+                  </tr>
+                  <tr>
+                    <td>TWS-200</td>
+                    <td>31</td>
+                    <td>페어링·연결</td>
+                    <td>13</td>
+                    <td>41.9%</td>
+                  </tr>
+                  <tr>
+                    <td>BONE-200</td>
+                    <td>28</td>
+                    <td>A/S 문의</td>
+                    <td>8</td>
+                    <td>28.6%</td>
+                  </tr>
+                  <tr>
+                    <td>AIR-50</td>
+                    <td>25</td>
+                    <td>페어링·연결</td>
+                    <td>9</td>
+                    <td>36.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3 class="subhead-gap">모델별 대표 문의요약</h3>
+          <div class="insight-grid model-cards">
+            <div class="item">
+              <b>BONE-100 <span>A/S 문의</span></b>
+              <p>
+                유상수리 비용 문의, 수리 기간 문의, 보증기간 문의가 대표적으로
+                확인됩니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>TWS-300 <span>페어링·연결</span></b>
+              <p>
+                케이스에서 꺼내도 연결이 안 됨, 블루투스 목록에 기기가 안 뜸,
+                초기화 방법 안내 요청이 반복됩니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>BOOM-10 <span>사용법·설정</span></b>
+              <p>
+                전원 끄는 법, 볼륨 조절 방법, 방수 등급 사용 범위에 대한 문의가
+                중심입니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>GH-90 <span>A/S 문의</span></b>
+              <p>
+                보증기간 문의, 부품 단품 구매 문의, 보증서 분실 문의가
+                확인됩니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>SBAR-20 <span>페어링·연결</span></b>
+              <p>
+                휴대폰 연결 끊김, 연결은 되지만 소리가 나오지 않는 문제, 새 폰
+                페어링 문의가 대표적입니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>TWS-200 <span>페어링·연결</span></b>
+              <p>
+                노트북·폰 동시 연결 방법, 새 폰 페어링, 휴대폰 연결 끊김 문의가
+                확인됩니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>BONE-200 <span>A/S 문의</span></b>
+              <p>
+                수리 기간, 보증기간, 부품 단품 구매 관련 문의가 대표적으로
+                나타납니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>AIR-50 <span>페어링·연결</span></b>
+              <p>
+                휴대폰 연결이 자꾸 끊김, 초기화 방법 안내 요청, 블루투스 목록
+                미노출 문의가 확인됩니다.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section class="section missing-section">
+          <h2>2. 모델코드 미기재 문의 유형 분석</h2>
+          <p class="desc">모델코드가 비어 있는 46건만 따로 분리했습니다.</p>
+
+          <div class="full-block">
+            <h3>미기재 문의유형 표</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>문의유형</th>
+                    <th>건수</th>
+                    <th>비율</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>배송 문의</td>
+                    <td>18</td>
+                    <td>39.1%</td>
+                  </tr>
+                  <tr>
+                    <td>반품·교환 요청</td>
+                    <td>17</td>
+                    <td>37.0%</td>
+                  </tr>
+                  <tr>
+                    <td>기타</td>
+                    <td>11</td>
+                    <td>23.9%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3 class="subhead-gap">미기재 성격 요약 + 관리 제안</h3>
+          <div class="insight-grid">
+            <div class="item">
+              <b>성격 요약</b>
+              <p>
+                배송 문의 18건, 반품·교환 요청 17건, 기타 11건으로
+                주문·배송·반품성 문의가 중심입니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>채널 분포</b>
+              <p>
+                쿠팡 14건, 오픈마켓A 13건, 네이버쇼핑 10건, 자사몰 9건입니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>기술 문의 여부</b>
+              <p>
+                미기재 건에는 페어링·연결, 사용법·설정, A/S 문의가 확인되지
+                않습니다. 따라서 제품 사용 중 기술 문제라기보다 주문 처리 관련
+                문의로 보는 것이 더 안전합니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>관리 제안</b>
+              <p>
+                미기재는 제품 품질 분석에 직접 포함하기보다 ‘주문/배송/반품성
+                문의’로 별도 관리하고, 상담 기록 입력 시 제품 확인이 필요한
+                건인지 구분값을 추가하는 것이 좋습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="warnbox full-warning">
+            <b>주의</b><br />모델코드가 비어 있는 정확한 사유는 현재
+            파일만으로는 알 수 없습니다. 제품 특정이 불필요했던 문의일 수도
+            있고, 단순 입력 누락일 수도 있습니다.
+          </div>
+        </section>
+      </div>
+
+      <div id="channel" class="tab-panel">
+        <section class="section category-section">
+          <h2>0. 문의 카테고리 기준표</h2>
+          <p class="desc">
+            대시보드에서 사용하는 문의유형 기준입니다. 아래 분류는 CS 로그의
+            <b>문의유형</b> 컬럼 값을 기준으로 정리했습니다.
+          </p>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>문의 카테고리</th>
+                  <th>뜻</th>
+                  <th>주요 내용 예시</th>
+                  <th>분석 시 유의점</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>페어링·연결</td>
+                  <td>기기 연결, 블루투스 페어링 관련 문의</td>
+                  <td>
+                    연결 안 됨, 한쪽만 소리 남, 새 기기 연결, 블루투스 목록
+                    미노출
+                  </td>
+                  <td>
+                    제품 문제일 수도 있지만 초기 설정/사용법 이슈일 수도 있음
+                  </td>
+                </tr>
+                <tr>
+                  <td>사용법·설정</td>
+                  <td>제품 조작법, 설정 방법, 기능 사용 범위 문의</td>
+                  <td>
+                    전원 끄는 법, 볼륨 조절, LED 의미, 방수 등급, 멀티포인트
+                    사용법
+                  </td>
+                  <td>FAQ·매뉴얼 보강 대상으로 보기 좋음</td>
+                </tr>
+                <tr>
+                  <td>배송 문의</td>
+                  <td>배송 상태, 배송지, 송장 관련 문의</td>
+                  <td>배송 예정일, 배송 지연, 배송지 변경, 송장 조회 불가</td>
+                  <td>제품 품질 문제보다는 주문/물류 운영 이슈에 가까움</td>
+                </tr>
+                <tr>
+                  <td>반품·교환 요청</td>
+                  <td>반품, 교환, 환불, 수거 관련 문의</td>
+                  <td>
+                    반품 배송비, 수거 일정, 환불 시점, 단순변심 반품, 불량 의심
+                    교환
+                  </td>
+                  <td>
+                    실제 불량 여부는 반품/검수 결과 데이터가 있어야 확인 가능
+                  </td>
+                </tr>
+                <tr>
+                  <td>A/S 문의</td>
+                  <td>수리, 보증, 부품, 사후지원 관련 문의</td>
+                  <td>
+                    수리 기간, 유상수리 비용, 보증기간, 부품 단품 구매, 보증서
+                    분실
+                  </td>
+                  <td>실제 품질 문제로 확정하려면 A/S 판정 데이터가 필요함</td>
+                </tr>
+                <tr>
+                  <td>기타</td>
+                  <td>위 분류에 직접 포함되지 않는 운영성 문의</td>
+                  <td>리뷰 이벤트, 재입고 일정, 대량 구매 견적, 사은품 누락</td>
+                  <td>
+                    기타 안에서도 이벤트/재고/B2B/프로모션으로 세분화 가능
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="warnbox full-warning">
+            <b>주의</b><br />이 기준표는 파일 내 문의유형 컬럼과 문의요약 내용을
+            바탕으로 이해를 돕기 위해 정리한 것입니다. 실제 고객 의도나 최종
+            처리 결과는 별도 처리상태, 상담 이력, 반품·검수 데이터가 있어야
+            확정할 수 있습니다.
+          </div>
+        </section>
+        <section class="section channel-section">
+          <h2>채널별 문의 유형 분석</h2>
+          <p class="desc">
+            판매량은 반영하지 않고 CS 로그에 기록된 문의 건수만 기준으로
+            보았습니다. 표는 전체 너비로 두고, 아래에는 채널별 대응 전략을
+            카드형으로 분리했습니다.
+          </p>
+
+          <div class="full-block">
+            <h3>채널별 문의유형 표</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>채널</th>
+                    <th>총 문의</th>
+                    <th>페어링·연결</th>
+                    <th>사용법·설정</th>
+                    <th>배송</th>
+                    <th>반품·교환</th>
+                    <th>A/S</th>
+                    <th>기타</th>
+                    <th>최다 문의유형</th>
+                    <th>비율</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>쿠팡</td>
+                    <td>101</td>
+                    <td>25</td>
+                    <td>16</td>
+                    <td>13</td>
+                    <td>22</td>
+                    <td>15</td>
+                    <td>10</td>
+                    <td>페어링·연결</td>
+                    <td>24.8%</td>
+                  </tr>
+                  <tr>
+                    <td>네이버쇼핑</td>
+                    <td>73</td>
+                    <td>23</td>
+                    <td>15</td>
+                    <td>12</td>
+                    <td>11</td>
+                    <td>11</td>
+                    <td>1</td>
+                    <td>페어링·연결</td>
+                    <td>31.5%</td>
+                  </tr>
+                  <tr>
+                    <td>오픈마켓A</td>
+                    <td>67</td>
+                    <td>19</td>
+                    <td>13</td>
+                    <td>3</td>
+                    <td>8</td>
+                    <td>14</td>
+                    <td>10</td>
+                    <td>페어링·연결</td>
+                    <td>28.4%</td>
+                  </tr>
+                  <tr>
+                    <td>자사몰</td>
+                    <td>59</td>
+                    <td>13</td>
+                    <td>12</td>
+                    <td>8</td>
+                    <td>10</td>
+                    <td>8</td>
+                    <td>8</td>
+                    <td>페어링·연결</td>
+                    <td>22.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3 class="subhead-gap">채널별 대응 전략 카드</h3>
+          <div class="insight-grid channel-cards">
+            <div class="item">
+              <b>쿠팡 <span>문의 101건</span></b>
+              <p>
+                <strong>주요 문의:</strong> 페어링·연결 25건, 반품·교환 요청
+                22건
+              </p>
+              <p>
+                <strong>대응 제안:</strong> 연결 초기화/페어링 FAQ와 반품·교환
+                안내 템플릿을 함께 준비하는 것이 좋습니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>네이버쇼핑 <span>문의 73건</span></b>
+              <p>
+                <strong>주요 문의:</strong> 페어링·연결 23건, 사용법·설정 15건
+              </p>
+              <p>
+                <strong>대응 제안:</strong> 상품 상세페이지와 구매 전 FAQ에 연결
+                방법, 기본 설정, 초기 사용 안내를 보강하는 것이 좋습니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>오픈마켓A <span>문의 67건</span></b>
+              <p><strong>주요 문의:</strong> 페어링·연결 19건, A/S 문의 14건</p>
+              <p>
+                <strong>대응 제안:</strong> A/S 접수 기준, 보증 규정, 상담 연결
+                경로를 상품 페이지와 자동응답 문구에 명확히 표시하는 것이
+                좋습니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>자사몰 <span>문의 59건</span></b>
+              <p>
+                <strong>주요 문의:</strong> 페어링·연결 13건, 사용법·설정 12건,
+                반품·교환 요청 10건
+              </p>
+              <p>
+                <strong>대응 제안:</strong> FAQ 메뉴를 배송·반품·연결·사용법으로
+                나누어 고객이 직접 찾기 쉽게 구성하는 것이 좋습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="warnbox full-warning">
+            <b>해석 기준</b><br />쿠팡은 문의 건수 자체가 가장 많지만,
+            판매량·주문건수와 연결한 정확한 문제율은 현재 표만으로 단정할 수
+            없습니다. 이 섹션은 채널별 문의유형 분포를 기준으로 한 운영 대응
+            참고 자료입니다.
+          </div>
+        </section>
+
+        <section class="section channel-section">
+          <h2>채널별 제품 문의 건수</h2>
+          <p class="desc">
+            채널마다 어떤 모델코드의 문의가 많이 들어왔는지 확인하기 위한
+            표입니다. 모델코드가 비어 있는 건은 미기재로 분리했습니다.
+          </p>
+
+          <div class="full-block">
+            <h3>채널별 × 모델코드 문의 건수 표</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>채널</th>
+                    <th>BONE-100</th>
+                    <th>TWS-300</th>
+                    <th>BOOM-10</th>
+                    <th>GH-90</th>
+                    <th>SBAR-20</th>
+                    <th>TWS-200</th>
+                    <th>BONE-200</th>
+                    <th>AIR-50</th>
+                    <th>미기재</th>
+                    <th>합계</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>쿠팡</td>
+                    <td>12</td>
+                    <td>12</td>
+                    <td>12</td>
+                    <td>11</td>
+                    <td>12</td>
+                    <td>9</td>
+                    <td>9</td>
+                    <td>10</td>
+                    <td>14</td>
+                    <td>101</td>
+                  </tr>
+                  <tr>
+                    <td>네이버쇼핑</td>
+                    <td>8</td>
+                    <td>12</td>
+                    <td>11</td>
+                    <td>9</td>
+                    <td>9</td>
+                    <td>3</td>
+                    <td>6</td>
+                    <td>5</td>
+                    <td>10</td>
+                    <td>73</td>
+                  </tr>
+                  <tr>
+                    <td>오픈마켓A</td>
+                    <td>12</td>
+                    <td>7</td>
+                    <td>6</td>
+                    <td>8</td>
+                    <td>3</td>
+                    <td>10</td>
+                    <td>6</td>
+                    <td>2</td>
+                    <td>13</td>
+                    <td>67</td>
+                  </tr>
+                  <tr>
+                    <td>자사몰</td>
+                    <td>5</td>
+                    <td>5</td>
+                    <td>6</td>
+                    <td>3</td>
+                    <td>7</td>
+                    <td>9</td>
+                    <td>7</td>
+                    <td>8</td>
+                    <td>9</td>
+                    <td>59</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3 class="subhead-gap">채널별 제품 문의 특징</h3>
+          <div class="insight-grid channel-cards">
+            <div class="item">
+              <b>쿠팡 <span>미기재 14건</span></b>
+              <p>
+                미기재가 가장 많고, BONE-100·TWS-300·BOOM-10·SBAR-20이 각각
+                12건으로 비슷하게 나타납니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>네이버쇼핑 <span>TWS-300 12건</span></b>
+              <p>
+                TWS-300 12건, BOOM-10 11건, 미기재 10건 순으로 문의가 많습니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>오픈마켓A <span>미기재 13건</span></b>
+              <p>
+                미기재 13건, BONE-100 12건, TWS-200 10건이 상대적으로 높게
+                나타납니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>자사몰 <span>미기재·TWS-200 각 9건</span></b>
+              <p>
+                미기재와 TWS-200이 각각 9건이며, AIR-50도 8건으로 비교적
+                높습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="warnbox full-warning">
+            <b>주의</b><br />이 표는 채널별 제품 문의 건수만 보여줍니다. 채널별
+            판매량·주문건수·고객 수가 함께 연결되지 않았기 때문에, 특정 채널이나
+            제품의 문제율로 해석하면 안 됩니다.
+          </div>
+        </section>
+      </div>
+
+      <div id="special" class="tab-panel">
+        <section class="section category-section">
+          <h2>0. 문의 카테고리 기준표</h2>
+          <p class="desc">
+            대시보드에서 사용하는 문의유형 기준입니다. 아래 분류는 CS 로그의
+            <b>문의유형</b> 컬럼 값을 기준으로 정리했습니다.
+          </p>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>문의 카테고리</th>
+                  <th>뜻</th>
+                  <th>주요 내용 예시</th>
+                  <th>분석 시 유의점</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>페어링·연결</td>
+                  <td>기기 연결, 블루투스 페어링 관련 문의</td>
+                  <td>
+                    연결 안 됨, 한쪽만 소리 남, 새 기기 연결, 블루투스 목록
+                    미노출
+                  </td>
+                  <td>
+                    제품 문제일 수도 있지만 초기 설정/사용법 이슈일 수도 있음
+                  </td>
+                </tr>
+                <tr>
+                  <td>사용법·설정</td>
+                  <td>제품 조작법, 설정 방법, 기능 사용 범위 문의</td>
+                  <td>
+                    전원 끄는 법, 볼륨 조절, LED 의미, 방수 등급, 멀티포인트
+                    사용법
+                  </td>
+                  <td>FAQ·매뉴얼 보강 대상으로 보기 좋음</td>
+                </tr>
+                <tr>
+                  <td>배송 문의</td>
+                  <td>배송 상태, 배송지, 송장 관련 문의</td>
+                  <td>배송 예정일, 배송 지연, 배송지 변경, 송장 조회 불가</td>
+                  <td>제품 품질 문제보다는 주문/물류 운영 이슈에 가까움</td>
+                </tr>
+                <tr>
+                  <td>반품·교환 요청</td>
+                  <td>반품, 교환, 환불, 수거 관련 문의</td>
+                  <td>
+                    반품 배송비, 수거 일정, 환불 시점, 단순변심 반품, 불량 의심
+                    교환
+                  </td>
+                  <td>
+                    실제 불량 여부는 반품/검수 결과 데이터가 있어야 확인 가능
+                  </td>
+                </tr>
+                <tr>
+                  <td>A/S 문의</td>
+                  <td>수리, 보증, 부품, 사후지원 관련 문의</td>
+                  <td>
+                    수리 기간, 유상수리 비용, 보증기간, 부품 단품 구매, 보증서
+                    분실
+                  </td>
+                  <td>실제 품질 문제로 확정하려면 A/S 판정 데이터가 필요함</td>
+                </tr>
+                <tr>
+                  <td>기타</td>
+                  <td>위 분류에 직접 포함되지 않는 운영성 문의</td>
+                  <td>리뷰 이벤트, 재입고 일정, 대량 구매 견적, 사은품 누락</td>
+                  <td>
+                    기타 안에서도 이벤트/재고/B2B/프로모션으로 세분화 가능
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="warnbox full-warning">
+            <b>주의</b><br />이 기준표는 파일 내 문의유형 컬럼과 문의요약 내용을
+            바탕으로 이해를 돕기 위해 정리한 것입니다. 실제 고객 의도나 최종
+            처리 결과는 별도 처리상태, 상담 이력, 반품·검수 데이터가 있어야
+            확정할 수 있습니다.
+          </div>
+        </section>
+        <section class="section">
+          <h2>문의요약 내 핵심 특이사항 표현 분석</h2>
+          <p class="desc">
+            문의요약 텍스트에 명시된 표현 중 후속 관리 판단에 직접적으로 필요한
+            3개 항목만 남겼습니다. ‘안내 완료’와 ‘처리 완료’는 완료성 표현으로
+            묶어 ‘안내•처리 완료’로 통합했습니다.
+          </p>
+          <div class="full-block">
+            <h3>특이사항 표현별 건수 표</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>특이사항 표현</th>
+                    <th>포함 기준</th>
+                    <th>행 수</th>
+                    <th>전체 대비</th>
+                    <th>해석</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>재문의</td>
+                    <td>‘재문의’ 포함</td>
+                    <td>39</td>
+                    <td>13.0%</td>
+                    <td>
+                      같은 이슈가 반복되었거나 첫 안내만으로 해결되지 않았을
+                      가능성이 있는 건
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>회신 대기</td>
+                    <td>‘회신 대기’ 포함</td>
+                    <td>29</td>
+                    <td>9.7%</td>
+                    <td>최종 답변 완료 여부 확인이 필요한 건</td>
+                  </tr>
+                  <tr>
+                    <td>안내•처리 완료</td>
+                    <td>‘안내 완료’ 또는 ‘처리 완료’ 포함</td>
+                    <td>50</td>
+                    <td>16.7%</td>
+                    <td>상담 안내 또는 처리 완료로 기록된 건</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="tab-help">
+              이번 기준에서는 재문의, 회신 대기, 안내•처리 완료만 집계했습니다.
+              이 3개 표현 중 하나 이상 포함된 행은 총 118건입니다.
+            </p>
+          </div>
+
+          <h3 class="subhead-gap">후속 관리 필요 항목 요약</h3>
+          <div class="insight-grid channel-cards">
+            <div class="item">
+              <b>재문의 <span>39건</span></b>
+              <p>
+                반복 문의 가능성이 있어 기존 안내문, FAQ, 상담 응대 문구가
+                충분했는지 확인하는 것이 좋습니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>회신 대기 <span>29건</span></b>
+              <p>
+                최종 답변 완료 여부가 파일만으로는 확인되지 않아 미처리 잔여
+                건인지 우선 점검해야 합니다.
+              </p>
+            </div>
+            <div class="item">
+              <b>안내•처리 완료 <span>50건</span></b>
+              <p>
+                안내 완료 34건과 처리 완료 16건을 합친 값입니다. 완료성 기록으로
+                보이지만 실제 종결 여부는 별도 처리상태 컬럼이 없어 알 수
+                없습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="cols2" style="margin-top: 20px">
+            <div class="warnbox">
+              <b>‘회신 대기’를 주의해야 하는 이유</b><br />회신 대기는 답변이
+              아직 끝나지 않았거나 내부 확인 후 고객에게 다시 안내해야 하는
+              상태일 수 있습니다. 현재 파일에는 최종 답변일, 종결 여부, 담당자
+              컬럼이 없기 때문에 실제로 회신이 완료됐는지는 알 수 없습니다.
+              따라서 미처리 잔여 건으로 남아 있는지 우선 확인하는 것이 좋습니다.
+            </div>
+            <div class="warnbox">
+              <b>‘재문의’를 주의해야 하는 이유</b><br />재문의는 고객이 같은
+              문제로 다시 연락했거나 첫 안내만으로 해결되지 않았을 가능성을
+              보여줍니다. 다만 재문의의 정확한 원인이 상담 품질 문제인지, 고객의
+              추가 질문인지, 제품 문제가 반복된 것인지는 현재 파일만으로는 알 수
+              없습니다. 상담 내용과 처리 결과를 함께 봐야 합니다.
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <div class="footer">
+      GreenSound CS 문의 분석 대시보드 · CSV 로그 기반 정적 리포트
+    </div>
+    <script>
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tab-btn")
+            .forEach((b) => b.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-panel")
+            .forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById(btn.dataset.tab).classList.add("active");
+        });
+      });
+    </script>
+  </body>
+</html>
