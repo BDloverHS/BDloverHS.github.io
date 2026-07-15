@@ -1,0 +1,2403 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GreenSound 리뷰 분석 대시보드</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        --primary: #2563eb;
+        --primary2: #60a5fa;
+        --good: #059669;
+        --warn: #d97706;
+        --bad: #dc2626;
+        --dark: #111827;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard",
+          "Noto Sans KR", Arial, sans-serif;
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #111827, #1d4ed8);
+        color: white;
+        padding: 38px 44px 30px;
+        border-bottom-left-radius: 30px;
+        border-bottom-right-radius: 30px;
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 32px;
+        letter-spacing: -0.8px;
+      }
+
+      .header p {
+        margin: 10px 0 0;
+        color: #dbeafe;
+        font-size: 15px;
+      }
+
+      .wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .kpis {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: -15px;
+      }
+
+      .kpi {
+        background: var(--card);
+        border: 1px solid rgba(229, 231, 235, 0.9);
+        border-radius: 18px;
+        padding: 18px 18px 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      .kpi-title {
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .kpi-value {
+        font-size: 30px;
+        font-weight: 850;
+        letter-spacing: -0.8px;
+        margin-top: 5px;
+        color: var(--dark);
+      }
+
+      .kpi-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .blue .kpi-value {
+        color: var(--primary);
+      }
+
+      .green .kpi-value {
+        color: var(--good);
+      }
+
+      .orange .kpi-value {
+        color: var(--warn);
+      }
+
+      .red .kpi-value {
+        color: var(--bad);
+      }
+
+      .tabs {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 22px 0 4px;
+        background: #eaf1fb;
+        border: 1px solid #dbeafe;
+        border-radius: 18px;
+        padding: 8px;
+        position: sticky;
+        top: 10px;
+        z-index: 10;
+        backdrop-filter: blur(8px);
+      }
+
+      .tab-btn {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: #475569;
+        font-weight: 800;
+        font-size: 14px;
+        padding: 12px 18px;
+        border-radius: 13px;
+        cursor: pointer;
+        transition: 0.18s ease;
+        white-space: nowrap;
+      }
+
+      .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.65);
+        color: #1d4ed8;
+      }
+
+      .tab-btn.active {
+        background: #fff;
+        color: #1d4ed8;
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.16);
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.active {
+        display: block;
+      }
+
+      .tab-help {
+        margin: 8px 2px 0;
+        color: #64748b;
+        font-size: 12px;
+      }
+
+      .section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 24px;
+        margin-top: 20px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+      }
+
+      .section h2 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        letter-spacing: -0.5px;
+      }
+
+      .section .desc {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .cols2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .cols3 {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr 1fr;
+        gap: 20px;
+      }
+
+      .note {
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 14px;
+        padding: 14px 16px;
+        color: #475569;
+        font-size: 14px;
+      }
+
+      .warnbox {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 14px;
+        padding: 14px 16px;
+        color: #9a3412;
+        font-size: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #475569;
+        text-align: left;
+        font-size: 12px;
+        padding: 10px 9px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 9px;
+        border-bottom: 1px solid #eef2f7;
+        vertical-align: middle;
+      }
+
+      tbody tr:hover {
+        background: #f8fbff;
+      }
+
+      .table-scroll {
+        overflow: auto;
+        border-radius: 14px;
+      }
+
+      .barwrap {
+        position: relative;
+        background: #eef2f7;
+        border-radius: 999px;
+        min-width: 100px;
+        height: 24px;
+        overflow: hidden;
+      }
+
+      .barwrap .bar {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, var(--primary2), var(--primary));
+        opacity: 0.75;
+      }
+
+      .barwrap b {
+        position: relative;
+        z-index: 2;
+        display: block;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: #0f172a;
+      }
+
+      .rating-box {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .rating-row {
+        display: grid;
+        grid-template-columns: 92px 1fr 58px 54px;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+      }
+
+      .stars {
+        color: #f59e0b;
+        letter-spacing: 1px;
+        font-size: 13px;
+      }
+
+      .rating-track {
+        height: 14px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .rating-track span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #fbbf24, #f59e0b);
+      }
+
+      .rating-row b {
+        font-size: 12px;
+      }
+
+      .rating-row em {
+        font-style: normal;
+        font-size: 12px;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .chart {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .chart h4 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: #334155;
+      }
+
+      .chart-row {
+        display: grid;
+        grid-template-columns: 120px 1fr 56px;
+        gap: 10px;
+        align-items: center;
+        margin: 9px 0;
+      }
+
+      .chart-label {
+        font-size: 12px;
+        color: #475569;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .chart-track {
+        height: 13px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .chart-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #93c5fd, #2563eb);
+        border-radius: 999px;
+      }
+
+      .chart-val {
+        font-size: 12px;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .insights {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .insight {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 13px 14px;
+        font-size: 14px;
+      }
+
+      .insight:before {
+        content: "•";
+        color: var(--primary);
+        font-weight: 900;
+        margin-right: 8px;
+      }
+
+      .footer {
+        color: #64748b;
+        font-size: 12px;
+        text-align: center;
+        padding: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .kpis,
+        .cols2,
+        .cols3,
+        .insights {
+          grid-template-columns: 1fr;
+        }
+
+        .header {
+          padding: 28px 24px;
+        }
+
+        .wrap {
+          padding: 18px;
+        }
+
+        .chart-row {
+          grid-template-columns: 90px 1fr 48px;
+        }
+
+        .tabs {
+          overflow-x: auto;
+          position: static;
+        }
+
+        .tab-btn {
+          flex: 1;
+          min-width: 120px;
+        }
+      }
+
+      .matrix-chart {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+        margin: 12px 0 18px;
+      }
+
+      .matrix-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        margin: 0 0 14px;
+        color: #475569;
+        font-size: 12px;
+      }
+
+      .matrix-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        display: inline-block;
+      }
+
+      .stack-row {
+        display: grid;
+        grid-template-columns: 96px 1fr 52px;
+        gap: 12px;
+        align-items: center;
+        margin: 11px 0;
+      }
+
+      .stack-label {
+        font-size: 13px;
+        font-weight: 800;
+        color: #334155;
+      }
+
+      .stack-total {
+        font-size: 12px;
+        font-weight: 800;
+        text-align: right;
+        color: #475569;
+      }
+
+      .stack-bar {
+        display: flex;
+        height: 28px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+      }
+
+      .stack-seg {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        min-width: 0;
+      }
+
+      .stack-seg.zero {
+        display: none;
+      }
+
+      .c-defect {
+        background: #991b1b;
+      }
+
+      .c-connect {
+        background: #2563eb;
+      }
+
+      .c-sound {
+        background: #7c3aed;
+      }
+
+      .c-battery {
+        background: #059669;
+      }
+
+      .c-delivery {
+        background: #f97316;
+      }
+
+      .c-fit {
+        background: #0f766e;
+      }
+
+      .c-water {
+        background: #0284c7;
+      }
+
+      .c-size {
+        background: #64748b;
+      }
+
+      .heatmap-wrap {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px;
+        margin: 12px 0 18px;
+        overflow: auto;
+      }
+
+      .heatmap-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-end;
+        margin: 0 0 12px;
+      }
+
+      .heatmap-title b {
+        font-size: 14px;
+        color: #334155;
+      }
+
+      .heatmap-title span {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .heatmap {
+        display: grid;
+        grid-template-columns: 100px repeat(8, minmax(74px, 1fr));
+        gap: 6px;
+        min-width: 780px;
+      }
+
+      .hm-head,
+      .hm-row-label {
+        font-size: 11px;
+        font-weight: 800;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .hm-row-label {
+        justify-content: flex-start;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 8px;
+      }
+
+      .hm-cell {
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 850;
+        color: #0f172a;
+        border: 1px solid rgba(15, 23, 42, 0.05);
+      }
+
+      .hm0 {
+        background: #f8fafc;
+        color: #cbd5e1;
+      }
+
+      .hm1 {
+        background: #dbeafe;
+      }
+
+      .hm2 {
+        background: #bfdbfe;
+      }
+
+      .hm3 {
+        background: #93c5fd;
+      }
+
+      .hm4 {
+        background: #60a5fa;
+        color: #fff;
+      }
+
+      .hm5 {
+        background: #3b82f6;
+        color: #fff;
+      }
+
+      .hm6 {
+        background: #2563eb;
+        color: #fff;
+      }
+
+      .hm7 {
+        background: #1d4ed8;
+        color: #fff;
+      }
+
+      .hm8 {
+        background: #1e40af;
+        color: #fff;
+      }
+
+      .hm19 {
+        background: #172554;
+        color: #fff;
+      }
+
+      @media (max-width: 900px) {
+        .stack-row {
+          grid-template-columns: 78px 1fr 42px;
+        }
+
+        .stack-seg {
+          font-size: 10px;
+        }
+
+        .matrix-legend {
+          gap: 6px 10px;
+        }
+      }
+
+      .delay-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .badge-fast {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge-late {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .badge-long {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .badge-none {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .delay-stack-row {
+        display: grid;
+        grid-template-columns: 104px 1fr 64px;
+        gap: 12px;
+        align-items: center;
+        margin: 11px 0;
+      }
+
+      .delay-stack-bar {
+        display: flex;
+        height: 28px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+      }
+
+      .delay-seg {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 850;
+        min-width: 0;
+      }
+
+      .delay-seg.zero {
+        display: none;
+      }
+      .d-fast {
+        background: #059669;
+      }
+      .d-late {
+        background: #d97706;
+      }
+      .d-long {
+        background: #dc2626;
+      }
+      .d-none {
+        background: #6b7280;
+      }
+
+      .delay-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        margin: 0 0 14px;
+        color: #475569;
+        font-size: 12px;
+      }
+
+      @media (max-width: 900px) {
+        .delay-stack-row {
+          grid-template-columns: 82px 1fr 48px;
+        }
+        .delay-seg {
+          font-size: 10px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="header">
+      <h1>GreenSound 리뷰 분석 대시보드</h1>
+      <p>
+        파일: greensound_reviews.csv · 리뷰 분석은 중복 정리 기준,
+        답변 분석은 원본 행 기준
+      </p>
+    </header>
+    <main class="wrap">
+      <div class="grid kpis">
+        <div class="kpi blue">
+          <div class="kpi-title">원본 리뷰 수</div>
+          <div class="kpi-value">512건</div>
+          <div class="kpi-sub">판매자 답변 분석 기준</div>
+        </div>
+        <div class="kpi green">
+          <div class="kpi-title">중복 정리 후</div>
+          <div class="kpi-value">500건</div>
+          <div class="kpi-sub">중복 12쌍에서 1건씩 제외</div>
+        </div>
+        
+        <div class="kpi blue">
+          <div class="kpi-title">판매자 답변률</div>
+          <div class="kpi-value">92.6%</div>
+          <div class="kpi-sub">474건 답변 / 38건 미답변</div>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="대시보드 탭">
+        <button class="tab-btn active" type="button" data-tab="review">
+          리뷰 분석</button
+        ><button class="tab-btn" type="button" data-tab="answer">
+          답변 분석
+        </button>
+      </nav>
+      <p class="tab-help">
+        리뷰 분석은 중복 12쌍에서 1건씩 제외한 500건 기준이며, 답변 분석은 중복 리뷰를
+        포함한 원본 512건 기준입니다.
+      </p>
+
+      <section class="section">
+        <h2>0. 제품 구성표</h2>
+        <p class="desc">모델코드와 제품명을 비교하기 위한 정보입니다.</p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>모델코드</th>
+                <th>제품명</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>TWS-300</td>
+                <td>완전무선 이어폰(멀티포인트) — 2026년 2월 출시 신모델</td>
+              </tr>
+              <tr>
+                <td>TWS-200</td>
+                <td>완전무선 이어폰</td>
+              </tr>
+              <tr>
+                <td>AIR-50</td>
+                <td>공기전도 이어폰</td>
+              </tr>
+              <tr>
+                <td>BONE-100</td>
+                <td>골전도 이어폰</td>
+              </tr>
+              <tr>
+                <td>BONE-200</td>
+                <td>골전도 이어폰(방수)</td>
+              </tr>
+              <tr>
+                <td>BONE-200</td>
+                <td>골전도 이어폰(방수)</td>
+              </tr>
+              <tr>
+                <td>GH-90</td>
+                <td>게이밍 헤드셋</td>
+              </tr>
+              <tr>
+                <td>BOOM-10</td>
+                <td>블루투스 스피커</td>
+              </tr>
+              <tr>
+                <td>SBAR-20</td>
+                <td>사운드바</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="review" class="tab-panel active">
+        <section class="section">
+          <h2>1. 분석 기준</h2>
+          <p class="desc">
+            원본 별점을 임의로 보정하지 않고, 중복 리뷰 12쌍에서 대표 1건씩만 남긴
+            500건 기준으로 리뷰·별점·불만 사항을 분석했습니다.
+          </p>
+          <div class="cols2">
+            <div class="note">
+              <b>리뷰/별점/불만 분석</b><br />원본 512건 중 중복 12쌍에서 1건씩
+              제외 → <b>500건 기준</b>
+            </div>
+            
+            <div class="warnbox">
+              <b>주의</b><br />불만 카테고리는 리뷰 문장 내 표현을 기준으로 한
+              규칙 기반 분류입니다. 실제 고객 의도는 확실하지 않을 수 있습니다.
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>2. 별점 분포</h2>
+          <p class="desc">
+            중복쌍에서 대표 1건만 남긴 500건 기준입니다. 별점은 별도 보정 없이 원본 별점 그대로 계산했습니다.
+          </p>
+          <div class="cols2">
+            <div>
+              <h3>중복 제거 별점 분포</h3>
+              <div class="rating-box">
+                <div class="rating-row">
+                  <span class="stars">★★★★★</span>
+                  <div class="rating-track">
+                    <span style="width: 100%"></span>
+                  </div>
+                  <b>325건</b><em>65.0%</em>
+                </div>
+                <div class="rating-row">
+                  <span class="stars">★★★★</span>
+                  <div class="rating-track">
+                    <span style="width: 24.9%"></span>
+                  </div>
+                  <b>81건</b><em>16.2%</em>
+                </div>
+                <div class="rating-row">
+                  <span class="stars">★★★</span>
+                  <div class="rating-track">
+                    <span style="width: 18.2%"></span>
+                  </div>
+                  <b>59건</b><em>11.8%</em>
+                </div>
+                <div class="rating-row">
+                  <span class="stars">★★</span>
+                  <div class="rating-track">
+                    <span style="width: 7.1%"></span>
+                  </div>
+                  <b>23건</b><em>4.6%</em>
+                </div>
+                <div class="rating-row">
+                  <span class="stars">★</span>
+                  <div class="rating-track">
+                    <span style="width: 3.7%"></span>
+                  </div>
+                  <b>12건</b><em>2.4%</em>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3>별점 요약</h3>
+              <div class="rating-box">
+                <div class="note"><b>평균 별점</b><br />전체 500건 기준 <b>4.37점</b></div>
+                <div class="note" style="margin-top:10px"><b>긍정권 리뷰</b><br />4~5점 리뷰 <b>406건</b> · <b>81.2%</b></div>
+                <div class="warnbox" style="margin-top:10px"><b>주의 필요 리뷰</b><br />1~2점 리뷰 <b>35건</b> · <b>7.0%</b></div>
+              </div>
+            </div>
+          </div>
+          <h3 style="margin-top: 22px">제품별 별점 분포</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>제품</th>
+                  <th>1점</th>
+                  <th>2점</th>
+                  <th>3점</th>
+                  <th>4점</th>
+                  <th>5점</th>
+                  <th>합계</th>
+                  <th>평균별점</th>
+                  <th>5점비중</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>TWS-300</td>
+                  <td>1</td>
+                  <td>12</td>
+                  <td>19</td>
+                  <td>18</td>
+                  <td>57</td>
+                  <td>107</td>
+                  <td>4.10</td>
+                  <td>53.3%</td>
+                </tr>
+                <tr>
+                  <td>TWS-200</td>
+                  <td>2</td>
+                  <td>3</td>
+                  <td>8</td>
+                  <td>14</td>
+                  <td>56</td>
+                  <td>83</td>
+                  <td>4.43</td>
+                  <td>67.5%</td>
+                </tr>
+                <tr>
+                  <td>AIR-50</td>
+                  <td>3</td>
+                  <td>3</td>
+                  <td>7</td>
+                  <td>16</td>
+                  <td>50</td>
+                  <td>79</td>
+                  <td>4.35</td>
+                  <td>63.3%</td>
+                </tr>
+                <tr>
+                  <td>BONE-100</td>
+                  <td>1</td>
+                  <td>1</td>
+                  <td>10</td>
+                  <td>7</td>
+                  <td>58</td>
+                  <td>77</td>
+                  <td>4.56</td>
+                  <td>75.3%</td>
+                </tr>
+                <tr>
+                  <td>BONE-200</td>
+                  <td>0</td>
+                  <td>1</td>
+                  <td>9</td>
+                  <td>9</td>
+                  <td>32</td>
+                  <td>51</td>
+                  <td>4.41</td>
+                  <td>62.7%</td>
+                </tr>
+                <tr>
+                  <td>GH-90</td>
+                  <td>1</td>
+                  <td>1</td>
+                  <td>2</td>
+                  <td>7</td>
+                  <td>26</td>
+                  <td>37</td>
+                  <td>4.51</td>
+                  <td>70.3%</td>
+                </tr>
+                <tr>
+                  <td>BOOM-10</td>
+                  <td>3</td>
+                  <td>1</td>
+                  <td>1</td>
+                  <td>3</td>
+                  <td>25</td>
+                  <td>33</td>
+                  <td>4.39</td>
+                  <td>75.8%</td>
+                </tr>
+                <tr>
+                  <td>SBAR-20</td>
+                  <td>1</td>
+                  <td>1</td>
+                  <td>3</td>
+                  <td>7</td>
+                  <td>21</td>
+                  <td>33</td>
+                  <td>4.39</td>
+                  <td>63.6%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>3. 불만 카테고리</h2>
+          <p class="desc">
+            중복쌍 대표 1건 기준의 규칙 기반 분류입니다. 불만 카테고리는 리뷰 문장 내 표현을 기준으로 분류했습니다.
+          </p>
+          <div class="cols2">
+            <div>
+              <h3>불만 카테고리별 건수</h3>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>불만 카테고리</th>
+                      <th>건수</th>
+                      <th>비중</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>연결/페어링</td>
+                      <td>30</td>
+                      <td>29.4%</td>
+                    </tr>
+                    <tr>
+                      <td>음질/소리</td>
+                      <td>22</td>
+                      <td>21.6%</td>
+                    </tr>
+                    <tr>
+                      <td>충전/배터리</td>
+                      <td>17</td>
+                      <td>16.7%</td>
+                    </tr>
+                    <tr>
+                      <td>배송/포장</td>
+                      <td>16</td>
+                      <td>15.7%</td>
+                    </tr>
+                    <tr>
+                      <td>착용감/핏</td>
+                      <td>8</td>
+                      <td>7.8%</td>
+                    </tr>
+                    <tr>
+                      <td>방수/오작동</td>
+                      <td>5</td>
+                      <td>4.9%</td>
+                    </tr>
+                    <tr>
+                      <td>크기/공간</td>
+                      <td>4</td>
+                      <td>3.9%</td>
+                    </tr>
+                    <tr>
+                      <td>기기 불량/먹통</td>
+                      <td>1</td>
+                      <td>1.0%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h3>제품별 불만 요약</h3>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>제품</th>
+                      <th>전체 리뷰 수</th>
+                      <th>불만 리뷰 수</th>
+                      <th>불만 비중</th>
+                      <th>주요 불만</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>TWS-300</td>
+                      <td>107</td>
+                      <td>34</td>
+                      <td>31.8%</td>
+                      <td>연결/페어링</td>
+                    </tr>
+                    <tr>
+                      <td>AIR-50</td>
+                      <td>79</td>
+                      <td>14</td>
+                      <td>17.7%</td>
+                      <td>충전/배터리, 배송/포장</td>
+                    </tr>
+                    <tr>
+                      <td>BONE-100</td>
+                      <td>77</td>
+                      <td>15</td>
+                      <td>19.5%</td>
+                      <td>음질/소리, 착용감</td>
+                    </tr>
+                    <tr>
+                      <td>TWS-200</td>
+                      <td>83</td>
+                      <td>14</td>
+                      <td>16.9%</td>
+                      <td>연결/페어링</td>
+                    </tr>
+                    <tr>
+                      <td>BONE-200</td>
+                      <td>51</td>
+                      <td>11</td>
+                      <td>21.6%</td>
+                      <td>방수/오작동</td>
+                    </tr>
+                    <tr>
+                      <td>SBAR-20</td>
+                      <td>33</td>
+                      <td>5</td>
+                      <td>15.2%</td>
+                      <td>연결/페어링</td>
+                    </tr>
+                    <tr>
+                      <td>GH-90</td>
+                      <td>37</td>
+                      <td>5</td>
+                      <td>13.5%</td>
+                      <td>음질/소리</td>
+                    </tr>
+                    <tr>
+                      <td>BOOM-10</td>
+                      <td>33</td>
+                      <td>4</td>
+                      <td>12.1%</td>
+                      <td>크기/공간</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <h3 style="margin-top: 22px">제품별 × 불만 카테고리 상세</h3>
+          <div class="matrix-chart">
+            <div class="matrix-legend">
+              <span><i class="swatch c-defect"></i>기기 불량/먹통</span
+              ><span><i class="swatch c-connect"></i>연결/페어링</span
+              ><span><i class="swatch c-sound"></i>음질/소리</span
+              ><span><i class="swatch c-battery"></i>충전/배터리</span
+              ><span><i class="swatch c-delivery"></i>배송/포장</span
+              ><span><i class="swatch c-fit"></i>착용감/핏</span
+              ><span><i class="swatch c-water"></i>방수/오작동</span
+              ><span><i class="swatch c-size"></i>크기/공간</span>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">TWS-300</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect" style="width: 2.9%">1</div>
+                <div class="stack-seg c-connect" style="width: 55.9%">19</div>
+                <div class="stack-seg c-sound" style="width: 17.6%">6</div>
+                <div class="stack-seg c-battery" style="width: 8.8%">3</div>
+                <div class="stack-seg c-delivery" style="width: 14.7%">5</div>
+                <div class="stack-seg c-fit zero" style="width: 0%"></div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size zero" style="width: 0%"></div>
+              </div>
+              <div class="stack-total">34건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">BONE-100</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect" style="width: 6.7%">1</div>
+                <div class="stack-seg c-sound" style="width: 33.3%">5</div>
+                <div class="stack-seg c-battery" style="width: 20%">3</div>
+                <div class="stack-seg c-delivery" style="width: 13.3%">2</div>
+                <div class="stack-seg c-fit" style="width: 26.7%">4</div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size zero" style="width: 0%"></div>
+              </div>
+              <div class="stack-total">15건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">AIR-50</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect zero" style="width: 0%"></div>
+                <div class="stack-seg c-sound" style="width: 21.4%">3</div>
+                <div class="stack-seg c-battery" style="width: 35.7%">5</div>
+                <div class="stack-seg c-delivery" style="width: 28.6%">4</div>
+                <div class="stack-seg c-fit" style="width: 14.3%">2</div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size zero" style="width: 0%"></div>
+              </div>
+              <div class="stack-total">14건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">TWS-200</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect" style="width: 50%">7</div>
+                <div class="stack-seg c-sound" style="width: 14.3%">2</div>
+                <div class="stack-seg c-battery" style="width: 28.6%">4</div>
+                <div class="stack-seg c-delivery" style="width: 7.1%">1</div>
+                <div class="stack-seg c-fit zero" style="width: 0%"></div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size zero" style="width: 0%"></div>
+              </div>
+              <div class="stack-total">14건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">BONE-200</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect zero" style="width: 0%"></div>
+                <div class="stack-seg c-sound" style="width: 9.1%">1</div>
+                <div class="stack-seg c-battery" style="width: 9.1%">1</div>
+                <div class="stack-seg c-delivery" style="width: 18.2%">2</div>
+                <div class="stack-seg c-fit" style="width: 18.2%">2</div>
+                <div class="stack-seg c-water" style="width: 45.5%">5</div>
+                <div class="stack-seg c-size zero" style="width: 0%"></div>
+              </div>
+              <div class="stack-total">11건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">GH-90</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect" style="width: 20%">1</div>
+                <div class="stack-seg c-sound" style="width: 80%">4</div>
+                <div class="stack-seg c-battery zero" style="width: 0%"></div>
+                <div class="stack-seg c-delivery zero" style="width: 0%"></div>
+                <div class="stack-seg c-fit zero" style="width: 0%"></div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size zero" style="width: 0%"></div>
+              </div>
+              <div class="stack-total">5건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">SBAR-20</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect" style="width: 40%">2</div>
+                <div class="stack-seg c-sound" style="width: 20%">1</div>
+                <div class="stack-seg c-battery zero" style="width: 0%"></div>
+                <div class="stack-seg c-delivery" style="width: 20%">1</div>
+                <div class="stack-seg c-fit zero" style="width: 0%"></div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size" style="width: 20%">1</div>
+              </div>
+              <div class="stack-total">5건</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-label">BOOM-10</div>
+              <div class="stack-bar">
+                <div class="stack-seg c-defect zero" style="width: 0%"></div>
+                <div class="stack-seg c-connect zero" style="width: 0%"></div>
+                <div class="stack-seg c-sound zero" style="width: 0%"></div>
+                <div class="stack-seg c-battery" style="width: 25%">1</div>
+                <div class="stack-seg c-delivery" style="width: 25%">1</div>
+                <div class="stack-seg c-fit zero" style="width: 0%"></div>
+                <div class="stack-seg c-water zero" style="width: 0%"></div>
+                <div class="stack-seg c-size" style="width: 50%">2</div>
+              </div>
+              <div class="stack-total">4건</div>
+            </div>
+          </div>
+          <div class="heatmap-wrap">
+            <div class="heatmap-title">
+              <b>제품별 × 불만 카테고리 히트맵</b
+              ><span
+                >숫자가 클수록 진한 색으로 표시됩니다. 표는 아래에 그대로
+                유지했습니다.</span
+              >
+            </div>
+            <div class="heatmap">
+              <div></div>
+              <div class="hm-head">기기 불량<br />/먹통</div>
+              <div class="hm-head">연결<br />/페어링</div>
+              <div class="hm-head">음질<br />/소리</div>
+              <div class="hm-head">충전<br />/배터리</div>
+              <div class="hm-head">배송<br />/포장</div>
+              <div class="hm-head">착용감<br />/핏</div>
+              <div class="hm-head">방수<br />/오작동</div>
+              <div class="hm-head">크기<br />/공간</div>
+              <div class="hm-row-label">TWS-300</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm19">19</div>
+              <div class="hm-cell hm6">6</div>
+              <div class="hm-cell hm3">3</div>
+              <div class="hm-cell hm5">5</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-row-label">BONE-100</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm5">5</div>
+              <div class="hm-cell hm3">3</div>
+              <div class="hm-cell hm2">2</div>
+              <div class="hm-cell hm4">4</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-row-label">AIR-50</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm3">3</div>
+              <div class="hm-cell hm5">5</div>
+              <div class="hm-cell hm4">4</div>
+              <div class="hm-cell hm2">2</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-row-label">TWS-200</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm7">7</div>
+              <div class="hm-cell hm2">2</div>
+              <div class="hm-cell hm4">4</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-row-label">BONE-200</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm2">2</div>
+              <div class="hm-cell hm2">2</div>
+              <div class="hm-cell hm5">5</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-row-label">GH-90</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm4">4</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-row-label">SBAR-20</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm2">2</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-row-label">BOOM-10</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm1">1</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm0">0</div>
+              <div class="hm-cell hm2">2</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="answer" class="tab-panel">
+        <section class="section">
+          <h2>1. 판매자 답변 분석</h2>
+          <p class="desc">
+            중복 리뷰도 실제 노출 리뷰 행으로 보아 원본 512건 전체 기준으로
+            분석했습니다.
+          </p>
+          <h3 style="margin-top: 22px">기존 답변률 분석</h3>
+          <div class="cols2">
+            <div class="chart">
+              <h4>제품별 답변률</h4>
+              <div class="chart-row">
+                <div class="chart-label">BOOM-10</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 85.3%"></div>
+                </div>
+                <div class="chart-val">85.3%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">TWS-300</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 89.2%"></div>
+                </div>
+                <div class="chart-val">89.2%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">AIR-50</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 91.2%"></div>
+                </div>
+                <div class="chart-val">91.2%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">BONE-200</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 92.3%"></div>
+                </div>
+                <div class="chart-val">92.3%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">SBAR-20</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 94.1%"></div>
+                </div>
+                <div class="chart-val">94.1%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">TWS-200</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 94.1%"></div>
+                </div>
+                <div class="chart-val">94.1%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">GH-90</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 97.3%"></div>
+                </div>
+                <div class="chart-val">97.3%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">BONE-100</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 97.5%"></div>
+                </div>
+                <div class="chart-val">97.5%</div>
+              </div>
+            </div>
+            <div class="chart">
+              <h4>별점별 답변률</h4>
+              <div class="chart-row">
+                <div class="chart-label">1점</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 75%"></div>
+                </div>
+                <div class="chart-val">75.0%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">2점</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 68%"></div>
+                </div>
+                <div class="chart-val">68.0%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">3점</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 93.2%"></div>
+                </div>
+                <div class="chart-val">93.2%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">4점</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 93.9%"></div>
+                </div>
+                <div class="chart-val">93.9%</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">5점</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 94.6%"></div>
+                </div>
+                <div class="chart-val">94.6%</div>
+              </div>
+            </div>
+          </div>
+          <h3 style="margin-top: 22px">제품별 답변률 및 답변 편중</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>제품</th>
+                  <th>전체리뷰</th>
+                  <th>답변있음</th>
+                  <th>답변없음</th>
+                  <th>답변률표시</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>BONE-100</td>
+                  <td>79</td>
+                  <td>77</td>
+                  <td>2</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 97.5%"></span><b>97.5%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>GH-90</td>
+                  <td>37</td>
+                  <td>36</td>
+                  <td>1</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 97.3%"></span><b>97.3%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>SBAR-20</td>
+                  <td>34</td>
+                  <td>32</td>
+                  <td>2</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 94.1%"></span><b>94.1%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>TWS-200</td>
+                  <td>85</td>
+                  <td>80</td>
+                  <td>5</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 94.1%"></span><b>94.1%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>BONE-200</td>
+                  <td>52</td>
+                  <td>48</td>
+                  <td>4</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 92.3%"></span><b>92.3%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>AIR-50</td>
+                  <td>80</td>
+                  <td>73</td>
+                  <td>7</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 91.2%"></span><b>91.2%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>TWS-300</td>
+                  <td>111</td>
+                  <td>99</td>
+                  <td>12</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 89.2%"></span><b>89.2%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>BOOM-10</td>
+                  <td>34</td>
+                  <td>29</td>
+                  <td>5</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 85.3%"></span><b>85.3%</b>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 style="margin-top: 22px">별점별 답변률</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>별점</th>
+                  <th>전체리뷰</th>
+                  <th>답변있음</th>
+                  <th>답변없음</th>
+                  <th>답변률표시</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>12.0</td>
+                  <td>9.0</td>
+                  <td>3.0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 75%"></span><b>75.0%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>25.0</td>
+                  <td>17.0</td>
+                  <td>8.0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 68%"></span><b>68.0%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>59.0</td>
+                  <td>55.0</td>
+                  <td>4.0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 93.2%"></span><b>93.2%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td>82.0</td>
+                  <td>77.0</td>
+                  <td>5.0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 93.9%"></span><b>93.9%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>5</td>
+                  <td>334.0</td>
+                  <td>316.0</td>
+                  <td>18.0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 94.6%"></span><b>94.6%</b>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 style="margin-top: 22px">월별 답변률</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>작성월</th>
+                  <th>전체리뷰</th>
+                  <th>답변있음</th>
+                  <th>답변없음</th>
+                  <th>답변률표시</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2025-07</td>
+                  <td>29</td>
+                  <td>29</td>
+                  <td>0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 100%"></span><b>100.0%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2025-08</td>
+                  <td>29</td>
+                  <td>28</td>
+                  <td>1</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 96.6%"></span><b>96.6%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2025-09</td>
+                  <td>34</td>
+                  <td>34</td>
+                  <td>0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 100%"></span><b>100.0%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2025-10</td>
+                  <td>35</td>
+                  <td>31</td>
+                  <td>4</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 88.6%"></span><b>88.6%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2025-11</td>
+                  <td>36</td>
+                  <td>35</td>
+                  <td>1</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 97.2%"></span><b>97.2%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2025-12</td>
+                  <td>32</td>
+                  <td>30</td>
+                  <td>2</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 93.8%"></span><b>93.8%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2026-01</td>
+                  <td>26</td>
+                  <td>25</td>
+                  <td>1</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 96.2%"></span><b>96.2%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2026-02</td>
+                  <td>52</td>
+                  <td>51</td>
+                  <td>1</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 98.1%"></span><b>98.1%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2026-03</td>
+                  <td>62</td>
+                  <td>62</td>
+                  <td>0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 100%"></span><b>100.0%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2026-04</td>
+                  <td>50</td>
+                  <td>50</td>
+                  <td>0</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 100%"></span><b>100.0%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2026-05</td>
+                  <td>70</td>
+                  <td>69</td>
+                  <td>1</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 98.6%"></span><b>98.6%</b>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2026-06</td>
+                  <td>57</td>
+                  <td>30</td>
+                  <td>27</td>
+                  <td>
+                    <div class="barwrap pct">
+                      <span class="bar" style="width: 52.6%"></span><b>52.6%</b>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="section" id="answer-delay">
+          <h2>2. 답변일자 기준 답변 지연 분석</h2>
+          <p class="desc">
+            리뷰 작성일과 판매자답변일의 차이를 계산했습니다. 중복 리뷰도 실제
+            노출 리뷰 행으로 보아 원본 512건 전체 기준입니다.
+          </p>
+
+          <h3>답변 소요 기준</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>구분</th>
+                  <th>기준</th>
+                  <th>건수</th>
+                  <th>전체 비중</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span class="delay-badge badge-fast">정상/빠른 답변</span>
+                  </td>
+                  <td>리뷰 작성 후 0~3일 이내</td>
+                  <td>374건</td>
+                  <td>73.0%</td>
+                </tr>
+                <tr>
+                  <td><span class="delay-badge badge-late">늦은 답변</span></td>
+                  <td>4일 이상 7일 이하 소요</td>
+                  <td>73건</td>
+                  <td>14.3%</td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="delay-badge badge-long">장기 지연 답변</span>
+                  </td>
+                  <td>8일 이상 소요</td>
+                  <td>27건</td>
+                  <td>5.3%</td>
+                </tr>
+                <tr>
+                  <td><span class="delay-badge badge-none">미답변</span></td>
+                  <td>답변일자 없음</td>
+                  <td>38건</td>
+                  <td>7.4%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cols3" style="margin-top: 16px">
+            <div class="note">
+              <b>답변 완료 건 평균 소요일</b><br /><b>2.7일</b> · 답변일자가
+              있는 474건 기준
+            </div>
+            <div class="warnbox">
+              <b>4일 이상 소요</b><br /><b>100건</b> · 답변 완료 건 기준 21.1%
+            </div>
+            <div class="warnbox">
+              <b>최장 지연</b><br /><b>27일</b> · V26-0453 사례
+            </div>
+          </div>
+
+          <h3 style="margin-top: 22px">답변 소요일 수 분포</h3>
+          <div class="cols2">
+            <div class="chart">
+              <h4>소요일수별 건수</h4>
+              <div class="chart-row">
+                <div class="chart-label">0일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 40.2%"></div>
+                </div>
+                <div class="chart-val">51건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">1일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 100%"></div>
+                </div>
+                <div class="chart-val">127건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">2일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 94.5%"></div>
+                </div>
+                <div class="chart-val">120건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">3일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 59.8%"></div>
+                </div>
+                <div class="chart-val">76건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">4일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 23.6%"></div>
+                </div>
+                <div class="chart-val">30건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">5일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 18.1%"></div>
+                </div>
+                <div class="chart-val">23건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">6일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 10.2%"></div>
+                </div>
+                <div class="chart-val">13건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">7일</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 5.5%"></div>
+                </div>
+                <div class="chart-val">7건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">8일 이상</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 21.3%"></div>
+                </div>
+                <div class="chart-val">27건</div>
+              </div>
+              <div class="chart-row">
+                <div class="chart-label">미답변</div>
+                <div class="chart-track">
+                  <div class="chart-fill" style="width: 29.9%"></div>
+                </div>
+                <div class="chart-val">38건</div>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>소요일수</th>
+                    <th>건수</th>
+                    <th>전체 비중</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>0일</td>
+                    <td>51</td>
+                    <td>10.0%</td>
+                  </tr>
+                  <tr>
+                    <td>1일</td>
+                    <td>127</td>
+                    <td>24.8%</td>
+                  </tr>
+                  <tr>
+                    <td>2일</td>
+                    <td>120</td>
+                    <td>23.4%</td>
+                  </tr>
+                  <tr>
+                    <td>3일</td>
+                    <td>76</td>
+                    <td>14.8%</td>
+                  </tr>
+                  <tr>
+                    <td>4일</td>
+                    <td>30</td>
+                    <td>5.9%</td>
+                  </tr>
+                  <tr>
+                    <td>5일</td>
+                    <td>23</td>
+                    <td>4.5%</td>
+                  </tr>
+                  <tr>
+                    <td>6일</td>
+                    <td>13</td>
+                    <td>2.5%</td>
+                  </tr>
+                  <tr>
+                    <td>7일</td>
+                    <td>7</td>
+                    <td>1.4%</td>
+                  </tr>
+                  <tr>
+                    <td>8일 이상</td>
+                    <td>27</td>
+                    <td>5.3%</td>
+                  </tr>
+                  <tr>
+                    <td>미답변</td>
+                    <td>38</td>
+                    <td>7.4%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 22px">제품별 답변 지연 현황</h3>
+          <div class="matrix-chart">
+            <div class="delay-legend">
+              <span><i class="swatch d-fast"></i>정상/빠른 답변</span
+              ><span><i class="swatch d-late"></i>늦은 답변</span
+              ><span><i class="swatch d-long"></i>장기 지연 답변</span
+              ><span><i class="swatch d-none"></i>미답변</span>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">TWS-300</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 63.1%">70</div>
+                <div class="delay-seg d-late" style="width: 17.1%">19</div>
+                <div class="delay-seg d-long" style="width: 9%">10</div>
+                <div class="delay-seg d-none" style="width: 10.8%">12</div>
+              </div>
+              <div class="stack-total">29건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">TWS-200</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 68.2%">58</div>
+                <div class="delay-seg d-late" style="width: 18.8%">16</div>
+                <div class="delay-seg d-long" style="width: 7.1%">6</div>
+                <div class="delay-seg d-none" style="width: 5.9%">5</div>
+              </div>
+              <div class="stack-total">22건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">BONE-100</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 82.3%">65</div>
+                <div class="delay-seg d-late" style="width: 11.4%">9</div>
+                <div class="delay-seg d-long" style="width: 3.8%">3</div>
+                <div class="delay-seg d-none" style="width: 2.5%">2</div>
+              </div>
+              <div class="stack-total">12건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">BONE-200</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 71.2%">37</div>
+                <div class="delay-seg d-late" style="width: 15.4%">8</div>
+                <div class="delay-seg d-long" style="width: 5.8%">3</div>
+                <div class="delay-seg d-none" style="width: 7.7%">4</div>
+              </div>
+              <div class="stack-total">11건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">AIR-50</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 78.8%">63</div>
+                <div class="delay-seg d-late" style="width: 10%">8</div>
+                <div class="delay-seg d-long" style="width: 2.5%">2</div>
+                <div class="delay-seg d-none" style="width: 8.8%">7</div>
+              </div>
+              <div class="stack-total">10건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">SBAR-20</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 76.5%">26</div>
+                <div class="delay-seg d-late" style="width: 14.7%">5</div>
+                <div class="delay-seg d-long" style="width: 2.9%">1</div>
+                <div class="delay-seg d-none" style="width: 5.9%">2</div>
+              </div>
+              <div class="stack-total">6건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">GH-90</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 81.1%">30</div>
+                <div class="delay-seg d-late" style="width: 13.5%">5</div>
+                <div class="delay-seg d-long" style="width: 2.7%">1</div>
+                <div class="delay-seg d-none" style="width: 2.7%">1</div>
+              </div>
+              <div class="stack-total">6건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">BOOM-10</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 73.5%">25</div>
+                <div class="delay-seg d-late" style="width: 8.8%">3</div>
+                <div class="delay-seg d-long" style="width: 2.9%">1</div>
+                <div class="delay-seg d-none" style="width: 14.7%">5</div>
+              </div>
+              <div class="stack-total">4건</div>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>제품</th>
+                  <th>전체 리뷰</th>
+                  <th>정상/빠른</th>
+                  <th>늦은 답변</th>
+                  <th>장기 지연</th>
+                  <th>미답변</th>
+                  <th>지연 합계</th>
+                  <th>지연률</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>TWS-300</td>
+                  <td>111</td>
+                  <td>70</td>
+                  <td>19</td>
+                  <td>10</td>
+                  <td>12</td>
+                  <td>29</td>
+                  <td>26.1%</td>
+                </tr>
+                <tr>
+                  <td>TWS-200</td>
+                  <td>85</td>
+                  <td>58</td>
+                  <td>16</td>
+                  <td>6</td>
+                  <td>5</td>
+                  <td>22</td>
+                  <td>25.9%</td>
+                </tr>
+                <tr>
+                  <td>BONE-100</td>
+                  <td>79</td>
+                  <td>65</td>
+                  <td>9</td>
+                  <td>3</td>
+                  <td>2</td>
+                  <td>12</td>
+                  <td>15.2%</td>
+                </tr>
+                <tr>
+                  <td>BONE-200</td>
+                  <td>52</td>
+                  <td>37</td>
+                  <td>8</td>
+                  <td>3</td>
+                  <td>4</td>
+                  <td>11</td>
+                  <td>21.2%</td>
+                </tr>
+                <tr>
+                  <td>AIR-50</td>
+                  <td>80</td>
+                  <td>63</td>
+                  <td>8</td>
+                  <td>2</td>
+                  <td>7</td>
+                  <td>10</td>
+                  <td>12.5%</td>
+                </tr>
+                <tr>
+                  <td>SBAR-20</td>
+                  <td>34</td>
+                  <td>26</td>
+                  <td>5</td>
+                  <td>1</td>
+                  <td>2</td>
+                  <td>6</td>
+                  <td>17.6%</td>
+                </tr>
+                <tr>
+                  <td>GH-90</td>
+                  <td>37</td>
+                  <td>30</td>
+                  <td>5</td>
+                  <td>1</td>
+                  <td>1</td>
+                  <td>6</td>
+                  <td>16.2%</td>
+                </tr>
+                <tr>
+                  <td>BOOM-10</td>
+                  <td>34</td>
+                  <td>25</td>
+                  <td>3</td>
+                  <td>1</td>
+                  <td>5</td>
+                  <td>4</td>
+                  <td>11.8%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 style="margin-top: 22px">별점별 답변 지연 현황</h3>
+          <div class="matrix-chart">
+            <div class="delay-legend">
+              <span><i class="swatch d-fast"></i>정상/빠른 답변</span
+              ><span><i class="swatch d-late"></i>늦은 답변</span
+              ><span><i class="swatch d-long"></i>장기 지연 답변</span
+              ><span><i class="swatch d-none"></i>미답변</span>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">1점</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 8.3%">1</div>
+                <div class="delay-seg d-late" style="width: 33.3%">4</div>
+                <div class="delay-seg d-long" style="width: 33.3%">4</div>
+                <div class="delay-seg d-none" style="width: 25%">3</div>
+              </div>
+              <div class="stack-total">8건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">2점</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 12%">3</div>
+                <div class="delay-seg d-late" style="width: 28%">7</div>
+                <div class="delay-seg d-long" style="width: 28%">7</div>
+                <div class="delay-seg d-none" style="width: 32%">8</div>
+              </div>
+              <div class="stack-total">14건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">3점</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 76.3%">45</div>
+                <div class="delay-seg d-late" style="width: 13.6%">8</div>
+                <div class="delay-seg d-long" style="width: 3.4%">2</div>
+                <div class="delay-seg d-none" style="width: 6.8%">4</div>
+              </div>
+              <div class="stack-total">10건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">4점</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 79.3%">65</div>
+                <div class="delay-seg d-late" style="width: 12.2%">10</div>
+                <div class="delay-seg d-long" style="width: 2.4%">2</div>
+                <div class="delay-seg d-none" style="width: 6.1%">5</div>
+              </div>
+              <div class="stack-total">12건</div>
+            </div>
+            <div class="delay-stack-row">
+              <div class="stack-label">5점</div>
+              <div class="delay-stack-bar">
+                <div class="delay-seg d-fast" style="width: 77.8%">260</div>
+                <div class="delay-seg d-late" style="width: 13.2%">44</div>
+                <div class="delay-seg d-long" style="width: 3.6%">12</div>
+                <div class="delay-seg d-none" style="width: 5.4%">18</div>
+              </div>
+              <div class="stack-total">56건</div>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>별점</th>
+                  <th>전체 리뷰</th>
+                  <th>정상/빠른</th>
+                  <th>늦은 답변</th>
+                  <th>장기 지연</th>
+                  <th>미답변</th>
+                  <th>지연 합계</th>
+                  <th>지연률</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1점</td>
+                  <td>12</td>
+                  <td>1</td>
+                  <td>4</td>
+                  <td>4</td>
+                  <td>3</td>
+                  <td>8</td>
+                  <td>66.7%</td>
+                </tr>
+                <tr>
+                  <td>2점</td>
+                  <td>25</td>
+                  <td>3</td>
+                  <td>7</td>
+                  <td>7</td>
+                  <td>8</td>
+                  <td>14</td>
+                  <td>56.0%</td>
+                </tr>
+                <tr>
+                  <td>3점</td>
+                  <td>59</td>
+                  <td>45</td>
+                  <td>8</td>
+                  <td>2</td>
+                  <td>4</td>
+                  <td>10</td>
+                  <td>16.9%</td>
+                </tr>
+                <tr>
+                  <td>4점</td>
+                  <td>82</td>
+                  <td>65</td>
+                  <td>10</td>
+                  <td>2</td>
+                  <td>5</td>
+                  <td>12</td>
+                  <td>14.6%</td>
+                </tr>
+                <tr>
+                  <td>5점</td>
+                  <td>334</td>
+                  <td>260</td>
+                  <td>44</td>
+                  <td>12</td>
+                  <td>18</td>
+                  <td>56</td>
+                  <td>16.8%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <section class="section">
+        <h2>핵심 인사이트</h2>
+        <div class="insights">
+          <div class="insight">
+            실제 고객 의견 기준은 중복 12쌍에서 1건씩 제외한 500건으로 보는 것이
+            적절합니다.
+          </div>
+          <div class="insight">
+            “별 하나 뺍니다” 리뷰 3건을 4점으로 보정하면 5점은 325건에서 322건,
+            4점은 81건에서 84건으로 바뀝니다.
+          </div>
+          <div class="insight">
+            보정 별점 기준에서도 5점 리뷰가 322건(64.4%)으로 가장 많습니다.
+          </div>
+          <div class="insight">
+            규칙 기반 불만 리뷰는 102건(20.4%)이며, 최다 카테고리는
+            연결/페어링입니다.
+          </div>
+          <div class="insight">
+            판매자 답변 분석은 원본 512건 기준이며, 전체 답변률은 92.6%입니다.
+          </div>
+          <div class="insight">
+            2026년 6월 답변률은 52.6%로 다른 월 대비 크게 낮습니다.
+          </div>
+          <div class="insight">
+            답변률이 부정적인 리뷰보다 긍정적인 리뷰에 치우쳐져 있습니다.
+          </div>
+        </div>
+      </section>
+    </main>
+    <div class="footer">
+      Generated from greensound_reviews(2).csv · 수치 기준: 대시보드 내 섹션별
+      명시
+    </div>
+    <script>
+      const tabButtons = document.querySelectorAll(".tab-btn");
+      const tabPanels = document.querySelectorAll(".tab-panel");
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.tab;
+          tabButtons.forEach((btn) =>
+            btn.classList.toggle("active", btn === button),
+          );
+          tabPanels.forEach((panel) =>
+            panel.classList.toggle("active", panel.id === target),
+          );
+          window.scrollTo({
+            top: document.querySelector(".tabs").offsetTop - 8,
+            behavior: "smooth",
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
