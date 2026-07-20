@@ -1,633 +1,5196 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>GreenSound 문제 원인 분석 통합 대시보드</title>
-<style>
-  :root {
-    --bg: #f4f6f8;
-    --card: #ffffff;
-    --ink: #17202a;
-    --muted: #667085;
-    --line: #d9dee7;
-    --dark: #1f2937;
-    --navy: #24364b;
-    --blue: #2f6fed;
-    --blue-soft: #eaf1ff;
-    --red: #d92d20;
-    --red-soft: #fff1f0;
-    --amber: #b76e00;
-    --amber-soft: #fff7e6;
-    --green: #067647;
-    --green-soft: #e9f8ef;
-    --radius: 14px;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
-    letter-spacing: -0.02em;
-  }
-  header {
-    background: #111827;
-    color: white;
-    padding: 34px 40px 28px;
-    border-bottom: 4px solid #334155;
-  }
-  .header-inner {
-    max-width: 1440px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-    align-items: flex-end;
-  }
-  h1 { margin: 0 0 10px; font-size: 28px; letter-spacing: -0.04em; }
-  .subtitle { margin: 0; color: #cbd5e1; line-height: 1.6; font-size: 14px; }
-  .period {
-    padding: 10px 14px;
-    border: 1px solid rgba(255,255,255,.18);
-    border-radius: 999px;
-    color: #e5e7eb;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-  nav {
-    position: sticky; top: 0; z-index: 20;
-    background: rgba(244, 246, 248, .94);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--line);
-  }
-  .nav-inner {
-    max-width: 1440px; margin: 0 auto; padding: 10px 28px;
-    display: flex; gap: 8px; overflow-x: auto;
-  }
-  .nav-inner a {
-    text-decoration: none;
-    color: #475467;
-    background: white;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 14px;
-    font-weight: 800;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-  main { max-width: 1440px; margin: 0 auto; padding: 24px 28px 72px; }
-  .section {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 22px;
-    margin-bottom: 20px;
-    box-shadow: 0 10px 24px rgba(17, 24, 39, .04);
-  }
-  .section-title {
-    display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 16px;
-  }
-  h2 { margin: 0; font-size: 22px; letter-spacing: -0.04em; }
-  h3 { margin: 0 0 12px; font-size: 17px; letter-spacing: -0.03em; }
-  .desc { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
-  .grid { display: grid; gap: 14px; }
-  .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-bottom: 18px; }
-  .kpi {
-    background: white;
-    border: 1px solid var(--line);
-    border-radius: 13px;
-    padding: 16px;
-  }
-  .kpi .label { color: var(--muted); font-size: 12px; font-weight: 800; margin-bottom: 8px; }
-  .kpi .value { font-size: 22px; font-weight: 900; letter-spacing: -0.04em; }
-  .kpi .note { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.45; }
-  .kpi.danger { border-color: #fecaca; background: #fffafa; }
-  .kpi.danger .value { color: var(--red); }
-  .flow {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
-  }
-  .flow-step {
-    border: 1px solid var(--line);
-    background: #fafbfc;
-    border-radius: 13px;
-    padding: 16px;
-    position: relative;
-  }
-  .flow-step strong { display:block; margin-bottom: 7px; font-size: 14px; }
-  .flow-step p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
-  .flow-step.highlight { border-color: #fca5a5; background: #fff7f7; }
-  .cols2 { grid-template-columns: 1.05fr .95fr; align-items: start; }
-  .cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 980px; background: white; }
-  th, td {
-    border-bottom: 1px solid #edf0f5;
-    padding: 10px 11px;
-    text-align: right;
-    white-space: nowrap;
-    vertical-align: middle;
-  }
-  th {
-    background: #f8fafc;
-    color: #344054;
-    font-size: 12px;
-    font-weight: 900;
-    position: sticky; top: 0; z-index: 1;
-  }
-  td:first-child, th:first-child, td:nth-child(2), th:nth-child(2) { text-align: left; }
-  td span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
-  .focus-row td { background: #fff7f7; }
-  .badge {
-    display: inline-flex; align-items:center; justify-content:center;
-    padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 900;
-  }
-  .badge.danger { background: var(--red-soft); color: #b42318; }
-  .badge.warn { background: var(--amber-soft); color: #a15c00; }
-  .badge.info { background: var(--blue-soft); color: #1d4ed8; }
-  .barcell {
-    position: relative;
-    min-width: 92px;
-    height: 24px;
-    background: #f1f5f9;
-    border-radius: 999px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-  }
-  .barcell i {
-    position: absolute; inset: 0 auto 0 0; background: #c7d7f8; border-radius: 999px;
-  }
-  .barcell b {
-    position: relative; z-index: 1; padding: 3px 9px; display: block; text-align: right;
-  }
-  .rankbars { display: grid; gap: 9px; }
-  .rankbar {
-    display: grid; grid-template-columns: 148px 1fr; align-items: center; gap: 12px;
-    padding: 9px 0; border-bottom: 1px solid #eef1f6;
-  }
-  .rankbar:last-child { border-bottom: 0; }
-  .rankbar .rank-meta strong { display: block; font-size: 13px; }
-  .rankbar .rank-meta span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .rankbar .barwrap { height: 16px; background: #edf2f7; border-radius: 999px; overflow: hidden; }
-  .rankbar .barwrap i { display:block; height:100%; background:#9db8f4; border-radius:999px; }
-  .rankbar.active .barwrap i { background: var(--red); }
-  .callout {
-    border-left: 5px solid var(--red);
-    background: var(--red-soft);
-    padding: 16px 18px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-  }
-  .callout strong { display: block; margin-bottom: 6px; color: #912018; }
-  .callout p { margin: 0; color: #7a271a; line-height: 1.65; font-size: 14px; }
-  .insight-card {
-    border: 1px solid var(--line);
-    background: #fcfcfd;
-    border-radius: 13px;
-    padding: 16px;
-  }
-  .insight-card .tag {
-    display:inline-block; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #344054;
-    font-size: 11px; font-weight: 900; margin-bottom: 10px;
-  }
-  .insight-card h4 { margin: 0 0 8px; font-size: 16px; }
-  .insight-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
-  .note-box {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 12px;
-    padding: 14px 16px;
-    color: #475467;
-    font-size: 13px;
-    line-height: 1.7;
-  }
-  .decision {
-    display: grid; grid-template-columns: 150px 1fr 1fr; gap: 0;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .decision div { padding: 14px; border-bottom: 1px solid #edf0f5; background: white; }
-  .decision div:nth-child(-n+3) { background: #f8fafc; font-weight: 900; }
-  .decision div:nth-last-child(-n+3) { border-bottom: 0; }
-  .foot {
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.6;
-    margin-top: 16px;
-  }
-  @media(max-width:1100px) {
-    .kpis { grid-template-columns: repeat(3, 1fr); }
-    .flow, .cols2, .cols3 { grid-template-columns: 1fr; }
-    .header-inner { align-items: flex-start; flex-direction: column; }
-  }
-  @media(max-width:720px) {
-    header { padding: 24px; }
-    main { padding: 18px; }
-    .kpis { grid-template-columns: 1fr; }
-    .section { padding: 16px; }
-    .rankbar { grid-template-columns: 1fr; gap: 6px; }
-  }
-</style>
-</head>
-<body>
-<header>
-  <div class="header-inner">
-    <div>
-      <h1>GreenSound 문제 원인 분석 통합 대시보드</h1>
-      <p class="subtitle">전체 제품 비교 후 눈에 띄는 제품을 선정하고, 고객 체감 이슈·반품 손실·위탁사 품질을 연결해 원인 후보를 확인합니다.</p>
-    </div>
-    <div class="period">2025.07 ~ 2026.06 분석 보고용</div>
-  </div>
-</header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GreenSound 문제 원인 분석 통합 대시보드</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --card: #ffffff;
+        --ink: #17202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --dark: #1f2937;
+        --navy: #24364b;
+        --blue: #2f6fed;
+        --blue-soft: #eaf1ff;
+        --red: #d92d20;
+        --red-soft: #fff1f0;
+        --amber: #b76e00;
+        --amber-soft: #fff7e6;
+        --green: #067647;
+        --green-soft: #e9f8ef;
+        --radius: 14px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+          "Apple SD Gothic Neo", Arial, sans-serif;
+        letter-spacing: -0.02em;
+      }
+      header {
+        background: #111827;
+        color: white;
+        padding: 34px 40px 28px;
+        border-bottom: 4px solid #334155;
+      }
+      .header-inner {
+        max-width: 1440px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: flex-end;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+      .subtitle {
+        margin: 0;
+        color: #cbd5e1;
+        line-height: 1.6;
+        font-size: 14px;
+      }
+      .period {
+        padding: 10px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        color: #e5e7eb;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(244, 246, 248, 0.94);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav-inner {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 10px 28px;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+      }
+      .nav-inner a {
+        text-decoration: none;
+        color: #475467;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-weight: 800;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      main {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 24px 28px 72px;
+      }
+      .section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
+      }
+      .section-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: -0.04em;
+      }
+      h3 {
+        margin: 0 0 12px;
+        font-size: 17px;
+        letter-spacing: -0.03em;
+      }
+      .desc {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+      .kpis {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        margin-bottom: 18px;
+      }
+      .kpi {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        padding: 16px;
+      }
+      .kpi .label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      .kpi .value {
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+      }
+      .kpi .note {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 6px;
+        line-height: 1.45;
+      }
+      .kpi.danger {
+        border-color: #fecaca;
+        background: #fffafa;
+      }
+      .kpi.danger .value {
+        color: var(--red);
+      }
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .flow-step {
+        border: 1px solid var(--line);
+        background: #fafbfc;
+        border-radius: 13px;
+        padding: 16px;
+        position: relative;
+      }
+      .flow-step strong {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 14px;
+      }
+      .flow-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .flow-step.highlight {
+        border-color: #fca5a5;
+        background: #fff7f7;
+      }
+      .cols2 {
+        grid-template-columns: 1.05fr 0.95fr;
+        align-items: start;
+      }
+      .cols3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        min-width: 980px;
+        background: white;
+      }
+      .product-summary-table {
+        min-width: 1320px;
+      }
+      .product-summary-table td:nth-child(5),
+      .product-summary-table th:nth-child(5) {
+        white-space: nowrap;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #edf0f5;
+        padding: 10px 11px;
+        text-align: right;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+      th {
+        background: #f8fafc;
+        color: #344054;
+        font-size: 12px;
+        font-weight: 900;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      td:first-child,
+      th:first-child,
+      td:nth-child(2),
+      th:nth-child(2) {
+        text-align: left;
+      }
+      td span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+      .focus-row td {
+        background: #fff7f7;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+      .badge.danger {
+        background: var(--red-soft);
+        color: #b42318;
+      }
+      .badge.warn {
+        background: var(--amber-soft);
+        color: #a15c00;
+      }
+      .badge.info {
+        background: var(--blue-soft);
+        color: #1d4ed8;
+      }
+      .barcell {
+        position: relative;
+        min-width: 92px;
+        height: 24px;
+        background: #f1f5f9;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+      .barcell i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: #c7d7f8;
+        border-radius: 999px;
+      }
+      .barcell b {
+        position: relative;
+        z-index: 1;
+        padding: 3px 9px;
+        display: block;
+        text-align: right;
+      }
+      .rankbars {
+        display: grid;
+        gap: 9px;
+      }
+      .rankbar {
+        display: grid;
+        grid-template-columns: 148px 1fr;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 0;
+        border-bottom: 1px solid #eef1f6;
+      }
+      .rankbar:last-child {
+        border-bottom: 0;
+      }
+      .rankbar .rank-meta strong {
+        display: block;
+        font-size: 13px;
+      }
+      .rankbar .rank-meta span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .rankbar .barwrap {
+        height: 16px;
+        background: #edf2f7;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .rankbar .barwrap i {
+        display: block;
+        height: 100%;
+        background: #9db8f4;
+        border-radius: 999px;
+      }
+      .rankbar.active .barwrap i {
+        background: var(--red);
+      }
+      .rate-scale-note {
+        margin: 4px 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .axis-legend {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin: 0 0 8px 160px;
+        color: #98a2b3;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .axis-legend span:nth-child(1) {
+        text-align: left;
+      }
+      .axis-legend span:nth-child(2),
+      .axis-legend span:nth-child(3) {
+        text-align: center;
+      }
+      .axis-legend span:nth-child(4) {
+        text-align: center;
+      }
+      .axis-legend span:nth-child(5) {
+        text-align: right;
+      }
+      .rankbar2 {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eef1f6;
+      }
+      .rankbar2:last-child {
+        border-bottom: 0;
+      }
+      .rank-head strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+      .rank-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .rate-chip,
+      .issue-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.3;
+      }
+      .rate-chip {
+        background: #eef4ff;
+        color: #2453c3;
+      }
+      .issue-chip {
+        background: #f3f4f6;
+        color: #475467;
+      }
+      .axisbar {
+        position: relative;
+        height: 18px;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        background:
+          linear-gradient(
+              to right,
+              rgba(148, 163, 184, 0.18) 1px,
+              transparent 1px
+            )
+            0 0/25% 100%,
+          #f8fafc;
+      }
+      .axisfill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: #9db8f4;
+      }
+      .axisfill.danger {
+        background: var(--red);
+      }
+      .callout {
+        border-left: 5px solid var(--red);
+        background: var(--red-soft);
+        padding: 16px 18px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+      }
+      .callout strong {
+        display: block;
+        margin-bottom: 6px;
+        color: #912018;
+      }
+      .callout p {
+        margin: 0;
+        color: #7a271a;
+        line-height: 1.65;
+        font-size: 14px;
+      }
+      .insight-card {
+        border: 1px solid var(--line);
+        background: #fcfcfd;
+        border-radius: 13px;
+        padding: 16px;
+      }
+      .insight-card .tag {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #344054;
+        font-size: 11px;
+        font-weight: 900;
+        margin-bottom: 10px;
+      }
+      .insight-card h4 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .insight-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .note-box {
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 14px 16px;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.7;
+      }
 
-<nav>
-  <div class="nav-inner">
-    <a href="#summary">1. 분석 결론</a>
-    <a href="#all-products">2. 전체 제품 비교</a>
-    <a href="#tws300">3. TWS-300 심층</a>
-    <a href="#vendor">4. 위탁사 품질</a>
-    <a href="#action">5. 개선 과제</a>
-  </div>
-</nav>
+      .basis-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+      }
+      .basis-card h3 {
+        margin-bottom: 6px;
+        font-size: 17px;
+      }
+      .basis-card .basis-sub {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .basis-list {
+        display: grid;
+        gap: 10px;
+        margin: 0 0 14px;
+      }
+      .basis-row {
+        display: grid;
+        grid-template-columns: 108px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 11px 12px;
+        border: 1px solid #edf0f5;
+        border-radius: 12px;
+        background: #f8fafc;
+      }
+      .basis-row b {
+        color: #344054;
+        font-size: 12px;
+      }
+      .basis-row span {
+        color: #101828;
+        font-size: 13px;
+        line-height: 1.5;
+        font-weight: 700;
+      }
+      .basis-row.emphasis {
+        border-color: #fecaca;
+        background: #fff7f7;
+      }
+      .basis-row.emphasis span {
+        color: #b42318;
+      }
+      .basis-conclusion {
+        background: #f0f6ff;
+        border: 1px solid #c7d7fe;
+        border-radius: 12px;
+        padding: 13px 14px;
+        color: #1e3a8a;
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .basis-conclusion strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+      .decision {
+        display: grid;
+        grid-template-columns: 150px 1fr 1fr;
+        gap: 0;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .decision div {
+        padding: 14px;
+        border-bottom: 1px solid #edf0f5;
+        background: white;
+      }
+      .decision div:nth-child(-n + 3) {
+        background: #f8fafc;
+        font-weight: 900;
+      }
+      .decision div:nth-last-child(-n + 3) {
+        border-bottom: 0;
+      }
+      .foot {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+        margin-top: 16px;
+      }
+      @media (max-width: 1100px) {
+        .kpis {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .flow,
+        .cols2,
+        .cols3,
+        .inspection-grid {
+          grid-template-columns: 1fr;
+        }
+        .header-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+      @media (max-width: 720px) {
+        header {
+          padding: 24px;
+        }
+        main {
+          padding: 18px;
+        }
+        .kpis {
+          grid-template-columns: 1fr;
+        }
+        .section {
+          padding: 16px;
+        }
+        .rankbar {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+        .rankbar2 {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .axis-legend {
+          margin-left: 0;
+        }
+      }
 
-<main>
-  <section class="section" id="summary">
-    <div class="section-title">
-      <div>
-        <h2>1. 분석 결론</h2>
-        <p class="desc">특정 제품을 먼저 정해놓고 본 것이 아니라, 전체 제품 비교 결과에서 TWS-300이 가장 눈에 띄어 심층 확인 대상으로 선정했습니다.</p>
+      /* 탭별 내용 보강용 컴포넌트 */
+      .subsection {
+        margin-top: 20px;
+      }
+      .subsection h3 {
+        margin-bottom: 8px;
+      }
+      .compact-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .compact-grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .evidence-card {
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: #ffffff;
+        padding: 15px;
+      }
+      .evidence-card .small-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+        margin-bottom: 7px;
+      }
+      .evidence-card .big {
+        font-size: 22px;
+        font-weight: 950;
+        letter-spacing: -0.04em;
+      }
+      .evidence-card p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .mini-list {
+        margin: 0;
+        padding-left: 18px;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.8;
+      }
+      .two-col-note {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .plain-card {
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: #fafbfc;
+        padding: 15px 16px;
+      }
+      .plain-card b {
+        display: block;
+        margin-bottom: 7px;
+      }
+      .plain-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .mini-table table {
+        min-width: 720px;
+      }
+      .inspection-layout {
+        margin-top: 20px;
+      }
+      .inspection-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.28fr) minmax(300px, 0.95fr);
+        gap: 16px;
+        align-items: start;
+      }
+      .inspection-grid .table-wrap {
+        width: 100%;
+      }
+      .inspection-grid .mini-table table {
+        min-width: 620px;
+      }
+      .inspection-grid .note-box {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .process-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .process-card {
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        padding: 14px;
+        background: #fff;
+      }
+      .process-card strong {
+        display: block;
+        font-size: 20px;
+        letter-spacing: -0.04em;
+      }
+      .process-card span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .process-card.loss {
+        border-color: #fecaca;
+        background: #fffafa;
+      }
+      .process-card.loss strong {
+        color: var(--red);
+      }
+      .checklist {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .check-item {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 13px;
+        padding: 14px;
+      }
+      .check-item strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .check-item p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .metric-line {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #edf0f5;
+      }
+      .metric-line:last-child {
+        border-bottom: 0;
+      }
+      .metric-line b {
+        color: #344054;
+      }
+      .metric-line span {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      /* 개선 과제: 부서별 액션 카드 */
+      .action-brief {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .action-card {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #ffffff;
+        padding: 18px;
+        min-height: 310px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow: hidden;
+      }
+      .action-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: #cbd5e1;
+      }
+      .action-card.marketing::before {
+        background: #2f6fed;
+      }
+      .action-card.cs::before {
+        background: #f59e0b;
+      }
+      .action-card.quality::before {
+        background: #16a34a;
+      }
+      .action-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .action-card-title {
+        min-width: 0;
+      }
+      .action-card-title .area-label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+        margin-bottom: 5px;
+      }
+      .action-card-title h3 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: -0.04em;
+      }
+      .team-pill {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #344054;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+      .action-problem {
+        border-radius: 12px;
+        padding: 12px 13px;
+        background: #f8fafc;
+        border: 1px solid #eef1f6;
+      }
+      .action-problem b {
+        display: block;
+        font-size: 12px;
+        color: #475467;
+        margin-bottom: 5px;
+      }
+      .action-problem p {
+        margin: 0;
+        color: #101828;
+        font-size: 13px;
+        line-height: 1.6;
+        font-weight: 700;
+      }
+      .action-list-title {
+        margin: 0 0 8px;
+        color: #344054;
+        font-size: 12px;
+        font-weight: 950;
+      }
+      .action-list {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .action-list li {
+        position: relative;
+        padding-left: 18px;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .action-list li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.62em;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #94a3b8;
+      }
+      .action-card.marketing .action-list li::before {
+        background: #2f6fed;
+      }
+      .action-card.cs .action-list li::before {
+        background: #f59e0b;
+      }
+      .action-card.quality .action-list li::before {
+        background: #16a34a;
+      }
+      .action-metrics {
+        margin-top: auto;
+        padding-top: 12px;
+        border-top: 1px solid #edf0f5;
+      }
+      .action-metrics b {
+        display: block;
+        color: #344054;
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      .metric-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .metric-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 8px;
+        border-radius: 999px;
+        background: #f2f4f7;
+        color: #475467;
+        font-size: 11px;
+        font-weight: 900;
+        line-height: 1.25;
+      }
+      .action-summary-note {
+        margin-top: 16px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 13px;
+        background: #fbfcff;
+        padding: 14px 16px;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .action-summary-note strong {
+        color: #101828;
+      }
+
+      .cs-draft-section {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #ffffff;
+        padding: 18px;
+      }
+      .cs-draft-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+      .cs-draft-head h3 {
+        margin: 0 0 5px;
+        font-size: 18px;
+        letter-spacing: -0.04em;
+      }
+      .cs-draft-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .cs-draft-badge {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: #2f6fed;
+        font-size: 12px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+      .cs-draft-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .cs-draft-card {
+        position: relative;
+        border: 1px solid #e6ebf2;
+        border-radius: 15px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        padding: 15px 15px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+        min-height: 260px;
+      }
+      .cs-draft-card::before {
+        content: "";
+        position: absolute;
+        left: 15px;
+        right: 15px;
+        top: 0;
+        height: 4px;
+        border-radius: 0 0 999px 999px;
+        background: #94a3b8;
+      }
+      .cs-draft-card.connect::before {
+        background: #2f6fed;
+      }
+      .cs-draft-card.usage::before {
+        background: #f59e0b;
+      }
+      .cs-draft-card.return::before {
+        background: #16a34a;
+      }
+      .cs-draft-type {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .cs-draft-type h4 {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: -0.035em;
+      }
+      .cs-draft-count {
+        flex: 0 0 auto;
+        padding: 5px 8px;
+        border-radius: 999px;
+        background: #f2f4f7;
+        color: #475467;
+        font-size: 11px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+      .cs-draft-label {
+        margin: 0 0 5px;
+        color: #344054;
+        font-size: 12px;
+        font-weight: 950;
+      }
+      .cs-draft-text {
+        margin: 0;
+        color: #101828;
+        font-size: 13px;
+        line-height: 1.72;
+        letter-spacing: -0.015em;
+      }
+      .cs-draft-check {
+        margin-top: auto;
+        border-top: 1px solid #edf0f5;
+        padding-top: 10px;
+      }
+      .cs-draft-check span {
+        display: inline-flex;
+        margin: 3px 4px 0 0;
+        padding: 5px 8px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #edf2f7;
+        color: #475467;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      @media (max-width: 1100px) {
+        .action-brief {
+          grid-template-columns: 1fr;
+        }
+        .action-card {
+          min-height: 0;
+        }
+        .cs-draft-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .cs-draft-grid {
+          grid-template-columns: 1fr;
+        }
+        .cs-draft-card {
+          min-height: 0;
+        }
+      }
+
+      /* 위탁사별 입고 품질 비교 그래프 */
+      .vendor-rate-compare {
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 16px 18px 18px;
+      }
+      .vendor-rate-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 8px;
+      }
+      .vendor-rate-head h4 {
+        margin: 0 0 5px;
+        font-size: 15px;
+        letter-spacing: -0.03em;
+      }
+      .vendor-rate-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .vendor-rate-legend {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        font-weight: 900;
+        color: #344054;
+        white-space: nowrap;
+      }
+      .vendor-rate-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .vendor-rate-legend i {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+      .vendor-rate-legend .vendor-a i {
+        background: #2f6fed;
+      }
+      .vendor-rate-legend .vendor-b i {
+        background: #f59e0b;
+      }
+      .vendor-rate-legend .vendor-c i {
+        background: #10b981;
+      }
+      .vendor-dual-chart-wrap {
+        margin-top: 10px;
+        border: 1px solid #eef2f7;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        padding: 8px 8px 2px;
+        overflow-x: auto;
+      }
+      .vendor-dual-chart {
+        width: 100%;
+        min-width: 760px;
+        height: 390px;
+        display: block;
+      }
+      .vendor-dual-chart text {
+        font-family: inherit;
+      }
+      .vendor-dual-chart .axis-line {
+        stroke: #cfd8e3;
+        stroke-width: 1.2;
+      }
+      .vendor-dual-chart .grid-line {
+        stroke: #e6ebf2;
+        stroke-width: 1;
+      }
+      .vendor-dual-chart .right-grid-line {
+        stroke: #eef2f7;
+        stroke-width: 1;
+        stroke-dasharray: 4 5;
+      }
+      .vendor-dual-chart .tick {
+        fill: #667085;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .vendor-dual-chart .axis-title {
+        fill: #475467;
+        font-size: 12px;
+        font-weight: 950;
+        letter-spacing: -0.02em;
+      }
+      .vendor-dual-chart .x-label {
+        fill: #0f172a;
+        font-size: 13px;
+        font-weight: 950;
+        letter-spacing: -0.03em;
+      }
+      .vendor-dual-chart .bar-value {
+        fill: #111827;
+        font-size: 11px;
+        font-weight: 950;
+      }
+      .vendor-dual-chart .metric-caption {
+        fill: #64748b;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .vendor-bar-a {
+        fill: #2f6fed;
+      }
+      .vendor-bar-b {
+        fill: #f59e0b;
+      }
+      .vendor-bar-c {
+        fill: #10b981;
+      }
+      .vendor-rate-note {
+        margin: 12px 0 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+        border: 1px solid #edf2f7;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      @media (max-width: 900px) {
+        .vendor-rate-head {
+          flex-direction: column;
+        }
+      }
+
+      /* 위탁사별 주요 불량유형 원그래프 */
+      .vendor-pie-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .vendor-pie-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 16px;
+        min-width: 0;
+        overflow: hidden;
+      }
+      .vendor-pie-card.focus {
+        border-color: #fecaca;
+        background: #fffafa;
+      }
+      .vendor-pie-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .vendor-pie-head strong {
+        display: block;
+        font-size: 16px;
+        font-weight: 950;
+        letter-spacing: -0.04em;
+      }
+      .vendor-pie-head span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 4px;
+      }
+      .vendor-pie-body {
+        display: grid;
+        grid-template-columns: 188px minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+      }
+      .vendor-pie-svg {
+        width: 188px;
+        height: 188px;
+        display: block;
+        filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.08));
+      }
+      .vendor-pie-svg path {
+        stroke: #ffffff;
+        stroke-width: 2.5;
+        cursor: default !important;
+        transition:
+          filter 0.12s ease,
+          opacity 0.12s ease;
+      }
+      .vendor-pie-svg path:hover {
+        filter: brightness(0.96);
+        opacity: 0.92;
+      }
+      .vendor-pie-legend {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+      }
+      .vendor-pie-legend-row {
+        display: grid;
+        grid-template-columns: 10px minmax(0, 1fr);
+        column-gap: 8px;
+        row-gap: 2px;
+        align-items: center;
+        padding: 8px 9px;
+        border: 1px solid #edf0f5;
+        border-radius: 10px;
+        background: #ffffff;
+        cursor: default !important;
+        min-width: 0;
+      }
+      .vendor-pie-legend-row i {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        grid-row: 1 / span 2;
+      }
+      .vendor-pie-legend-row span {
+        color: #344054;
+        font-size: 12px;
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
+      .vendor-pie-legend-row b {
+        color: #101828;
+        font-size: 11px;
+        font-weight: 950;
+        white-space: nowrap;
+        line-height: 1.25;
+        min-width: 0;
+      }
+      .vendor-pie-note {
+        margin: 12px 0 0;
+        color: #475467;
+        font-size: 12px;
+        line-height: 1.6;
+        background: #f8fafc;
+        border: 1px solid #eef1f6;
+        border-radius: 10px;
+        padding: 10px 11px;
+      }
+      @media (max-width: 1180px) {
+        .vendor-pie-grid {
+          grid-template-columns: 1fr;
+        }
+        .vendor-pie-body {
+          grid-template-columns: 220px minmax(0, 1fr);
+        }
+        .vendor-pie-svg {
+          width: 220px;
+          height: 220px;
+        }
+      }
+      @media (max-width: 720px) {
+        .vendor-pie-body {
+          grid-template-columns: 1fr;
+          justify-items: center;
+        }
+        .vendor-pie-legend {
+          width: 100%;
+        }
+      }
+      @media (max-width: 1100px) {
+        .compact-grid,
+        .compact-grid.three,
+        .process-grid,
+        .checklist,
+        .two-col-note {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* 전체 제품 비교: 매출·반품률 추가 비교 그래프 */
+      .comparison-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 16px;
+      }
+      .comparison-card h4 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      .comparison-card .chart-caption {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .mini-axis {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        color: #98a2b3;
+        font-size: 10px;
+        font-weight: 800;
+        margin: 0 0 6px 132px;
+      }
+      .mini-axis span:nth-child(1) {
+        text-align: left;
+      }
+      .mini-axis span:nth-child(2),
+      .mini-axis span:nth-child(3),
+      .mini-axis span:nth-child(4) {
+        text-align: center;
+      }
+      .mini-axis span:nth-child(5) {
+        text-align: right;
+      }
+      .metric-bars {
+        display: grid;
+        gap: 8px;
+      }
+      .metric-bar-row {
+        display: grid;
+        grid-template-columns: 122px 1fr 112px;
+        gap: 10px;
+        align-items: center;
+        padding: 7px 0;
+        border-bottom: 1px solid #eef1f6;
+      }
+      .metric-bar-row:last-child {
+        border-bottom: 0;
+      }
+      .metric-bar-row .product-name {
+        font-weight: 900;
+        font-size: 12px;
+        color: #344054;
+      }
+      .metric-bar-row .metric-value {
+        text-align: right;
+        font-size: 12px;
+        font-weight: 900;
+        color: #17202a;
+        white-space: nowrap;
+      }
+      .metric-track {
+        height: 17px;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+        background:
+          linear-gradient(
+              to right,
+              rgba(148, 163, 184, 0.18) 1px,
+              transparent 1px
+            )
+            0 0/25% 100%,
+          #f8fafc;
+      }
+      .metric-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: #9db8f4;
+      }
+      .metric-fill.sales {
+        background: #6ea8fe;
+      }
+      .metric-fill.return {
+        background: #f59e0b;
+      }
+      .metric-fill.focus {
+        background: var(--red);
+      }
+      @media (max-width: 720px) {
+        .mini-axis {
+          margin-left: 0;
+        }
+        .metric-bar-row {
+          grid-template-columns: 1fr;
+          gap: 5px;
+        }
+        .metric-bar-row .metric-value {
+          text-align: left;
+        }
+      }
+
+      /* 제품별 추정 매출액·반품률: 발표용 세로 막대그래프 */
+      .bar-chart-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 16px;
+      }
+      .bar-chart-card h4 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      .bar-chart-card .chart-caption {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .vertical-chart {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 10px;
+        align-items: end;
+      }
+      .v-scale {
+        height: 260px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        color: #98a2b3;
+        font-size: 10px;
+        font-weight: 900;
+        text-align: right;
+        padding: 0 0 29px;
+      }
+      .v-chart-main {
+        min-width: 0;
+      }
+      .v-stage {
+        position: relative;
+        height: 260px;
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 10px 8px 0;
+        border-left: 1px solid #d8dee8;
+        border-bottom: 1px solid #cfd6e2;
+        border-radius: 12px 12px 0 0;
+        background:
+          linear-gradient(
+              to top,
+              rgba(148, 163, 184, 0.18) 1px,
+              transparent 1px
+            )
+            0 0/100% 25%,
+          linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      }
+      .v-item {
+        flex: 1 1 0;
+        min-width: 42px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        position: relative;
+      }
+      .v-value {
+        margin-bottom: 6px;
+        color: #17202a;
+        font-size: 11px;
+        line-height: 1.15;
+        font-weight: 950;
+        white-space: nowrap;
+        text-align: center;
+      }
+      .v-bar {
+        width: min(44px, 76%);
+        min-height: 4px;
+        border-radius: 8px 8px 0 0;
+        background: #4f83e5;
+        box-shadow: 0 8px 16px rgba(47, 111, 237, 0.12);
+      }
+      .v-bar.return {
+        background: #e69a2c;
+        box-shadow: 0 8px 16px rgba(230, 154, 44, 0.12);
+      }
+      .v-item.focus .v-bar {
+        background: var(--red);
+        box-shadow: 0 8px 16px rgba(217, 45, 32, 0.14);
+      }
+      .v-labels {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 10px;
+        padding: 9px 8px 0;
+        border-left: 1px solid transparent;
+      }
+      .v-labels span {
+        color: #344054;
+        font-size: 10px;
+        font-weight: 950;
+        text-align: center;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+      .chart-foot {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      @media (max-width: 900px) {
+        .vertical-chart {
+          grid-template-columns: 46px minmax(620px, 1fr);
+          overflow-x: auto;
+          padding-bottom: 4px;
+        }
+        .v-stage {
+          gap: 8px;
+        }
+        .v-bar {
+          width: 34px;
+        }
+      }
+
+      /* 탭 전환형 레이아웃 */
+      .tab-nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(244, 246, 248, 0.96);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .tab-button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: #475467;
+        border-radius: 999px;
+        padding: 10px 15px;
+        font-weight: 900;
+        font-size: 13px;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: 0.15s ease;
+      }
+      .tab-button:hover {
+        background: #f8fafc;
+        color: var(--navy);
+      }
+      .tab-button.active {
+        background: var(--navy);
+        color: #ffffff;
+        border-color: var(--navy);
+        box-shadow: 0 8px 18px rgba(36, 54, 75, 0.15);
+      }
+      .tab-panel {
+        display: none;
+        margin-bottom: 0;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+      main {
+        min-height: calc(100vh - 190px);
+      }
+
+      .product-summary-table .rate-text {
+        font-weight: 800;
+        color: #111827;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .product-summary-table .focus-rate {
+        color: #b91c1c;
+      }
+
+      /* TWS-300 심층 추가 분석 차트 */
+      .tws-added-section {
+        margin-top: 22px;
+      }
+      .analysis-chart-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        align-items: stretch;
+      }
+      .analysis-chart-card {
+        border: 1px solid var(--line);
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 16px;
+        min-width: 0;
+        min-height: 428px;
+        display: flex;
+        flex-direction: column;
+      }
+      .analysis-chart-card h4 {
+        margin: 0 0 6px;
+        font-size: 14px;
+        letter-spacing: -0.03em;
+        min-height: 18px;
+      }
+      .analysis-chart-card .chart-caption {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.55;
+        min-height: 34px;
+      }
+      .svg-chart {
+        width: 100%;
+        height: 270px;
+        display: block;
+        overflow: visible;
+        margin-top: auto;
+      }
+      .svg-chart circle {
+        cursor: default;
+      }
+      .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        margin: 4px 0 8px;
+        color: #475467;
+        font-size: 11px;
+        font-weight: 900;
+        min-height: 18px;
+      }
+      .judge-summary {
+        gap: 6px;
+        align-items: center;
+        color: #344054;
+      }
+      .judge-summary span {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 3px 7px;
+      }
+      .tooltip-trigger {
+        cursor: default !important;
+      }
+      .dashboard-tooltip {
+        position: fixed;
+        z-index: 9999;
+        min-width: 154px;
+        max-width: 260px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.94);
+        color: #ffffff;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.24);
+        font-size: 12px;
+        line-height: 1.55;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(4px);
+        transition:
+          opacity 0.12s ease,
+          transform 0.12s ease;
+        white-space: pre-line;
+      }
+      .dashboard-tooltip.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .dashboard-tooltip .tip-title {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 13px;
+        font-weight: 950;
+      }
+      .dashboard-tooltip .tip-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: #dbe4f0;
+      }
+      .dashboard-tooltip .tip-row b {
+        color: #ffffff;
+      }
+      .cs-seg.tooltip-trigger,
+      .stack-seg.tooltip-trigger,
+      .stacked-legend-row.tooltip-trigger {
+        cursor: default !important;
+      }
+      .cs-stack .cs-seg,
+      .stacked-column .stack-seg {
+        pointer-events: auto;
+      }
+
+      .legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        display: inline-block;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+      .legend-return {
+        background: #e69a2c;
+      }
+      .legend-rating {
+        background: #2f6fed;
+      }
+      .legend-pairing {
+        background: #2f6fed;
+      }
+      .legend-other {
+        background: #94a3b8;
+      }
+      .legend-normal {
+        background: #9db8f4;
+      }
+      .legend-defect {
+        background: #d92d20;
+      }
+      .legend-customer {
+        background: #f59e0b;
+      }
+      .legend-unopened {
+        background: #94a3b8;
+      }
+      .cs-stacked-bars {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: 8px;
+        align-items: end;
+        flex: 1;
+        min-height: 270px;
+      }
+      .cs-scale {
+        height: 248px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        color: #98a2b3;
+        font-size: 10px;
+        font-weight: 900;
+        text-align: right;
+        padding: 0 0 26px;
+      }
+      .cs-stage {
+        height: 248px;
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        padding: 10px 10px 0;
+        border-left: 1px solid #d8dee8;
+        border-bottom: 1px solid #cfd6e2;
+        border-radius: 12px 12px 0 0;
+        background:
+          linear-gradient(
+              to top,
+              rgba(148, 163, 184, 0.18) 1px,
+              transparent 1px
+            )
+            0 0/100% 25%,
+          linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+      }
+      .cs-item {
+        flex: 1 1 0;
+        min-width: 34px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+      }
+      .cs-value {
+        display: none;
+      }
+      .cs-stack {
+        width: min(44px, 78%);
+        min-height: 3px;
+        border-radius: 8px 8px 0 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column-reverse;
+        background: #e8eef7;
+        box-shadow: 0 8px 14px rgba(47, 111, 237, 0.1);
+      }
+      .cs-seg {
+        width: 100%;
+      }
+      .cs-seg.pairing {
+        background: #2f6fed;
+      }
+      .cs-seg.other {
+        background: #94a3b8;
+      }
+      .cs-labels {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        padding: 8px 10px 0 42px;
+      }
+      .cs-labels span {
+        text-align: center;
+        font-size: 10px;
+        font-weight: 950;
+        color: #344054;
+        white-space: nowrap;
+      }
+      .stacked-judge-wrap {
+        display: grid;
+        grid-template-columns: minmax(136px, 0.9fr) minmax(0, 1.1fr);
+        gap: 18px;
+        align-items: center;
+        flex: 1;
+        min-height: 270px;
+        padding-top: 4px;
+      }
+      .stacked-column {
+        width: 148px;
+        height: 264px;
+        margin: 0 auto;
+        border: 1px solid #cfd6e2;
+        border-radius: 12px 12px 8px 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column-reverse;
+        background: #f8fafc;
+        box-shadow: 0 10px 20px rgba(47, 111, 237, 0.1);
+      }
+      .stack-seg {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 950;
+        line-height: 1.2;
+        text-align: center;
+      }
+      .stack-seg.normal {
+        background: #9db8f4;
+        color: #0f172a;
+      }
+      .stack-seg.defect {
+        background: #d92d20;
+      }
+      .stack-seg.customer {
+        background: #f59e0b;
+        color: #111827;
+      }
+      .stack-seg.unopened {
+        background: #94a3b8;
+      }
+      .stacked-legend {
+        display: grid;
+        gap: 9px;
+        align-content: center;
+      }
+      .stacked-legend-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        color: #475467;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+      .stacked-legend-row b {
+        display: block;
+        color: #17202a;
+        font-size: 11px;
+        margin-top: 2px;
+      }
+      .full-note {
+        margin-top: 14px;
+      }
+      .mini-evidence {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .mini-evidence .evidence-card {
+        background: #fafbfc;
+      }
+      @media (max-width: 1180px) {
+        .analysis-chart-grid,
+        .mini-evidence {
+          grid-template-columns: 1fr;
+        }
+        .stacked-judge-wrap {
+          grid-template-columns: 150px minmax(0, 1fr);
+        }
+        .analysis-chart-card {
+          min-height: auto;
+        }
+        .svg-chart {
+          height: auto;
+          margin-top: 0;
+        }
+      }
+
+      /* 데이터 구조 예시 브라우저 */
+      .data-browser-wrap {
+        display: grid;
+        gap: 16px;
+      }
+      .data-browser-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
+      }
+      .data-browser-head h3 {
+        margin: 0 0 6px;
+        font-size: 17px;
+        color: var(--navy);
+      }
+      .data-browser-head p {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .dataset-select-box {
+        min-width: 310px;
+        display: grid;
+        gap: 6px;
+      }
+      .dataset-select-box label {
+        font-size: 12px;
+        font-weight: 900;
+        color: #475467;
+      }
+      .dataset-select-box select {
+        width: 100%;
+        border: 1px solid #cfd6e2;
+        border-radius: 12px;
+        padding: 12px 14px;
+        background: #f8fafc;
+        color: #17202a;
+        font-weight: 800;
+        outline: none;
+      }
+      .dataset-meta-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .dataset-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 12px;
+        font-weight: 900;
+      }
+      .dataset-desc-card {
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .dataset-desc-card b {
+        color: #17202a;
+      }
+      .data-table-shell {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
+      }
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 980px;
+        font-size: 12px;
+      }
+      .data-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f2f5f8;
+        color: #344054;
+        text-align: left;
+        padding: 12px 14px;
+        border-bottom: 1px solid #d8dee8;
+        white-space: nowrap;
+      }
+      .data-table tbody td {
+        padding: 11px 14px;
+        border-bottom: 1px solid #edf1f5;
+        color: #17202a;
+        vertical-align: top;
+      }
+      .data-table tbody tr:nth-child(even) td {
+        background: #fbfcfd;
+      }
+      .data-table .text-cell {
+        min-width: 260px;
+        max-width: 460px;
+        white-space: normal;
+        line-height: 1.45;
+      }
+      .data-browser-foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 12px 14px;
+        color: #64748b;
+        font-size: 12px;
+        background: #f8fafc;
+        border-top: 1px solid #edf1f5;
+      }
+      @media (max-width: 860px) {
+        .data-browser-head {
+          flex-direction: column;
+        }
+        .dataset-select-box {
+          min-width: 100%;
+        }
+      }
+
+      /* =========================================================
+     Report polish layer — visual style only, content unchanged
+     ========================================================= */
+      :root {
+        --bg: #eef3f6;
+        --card: #ffffff;
+        --ink: #102033;
+        --muted: #66758a;
+        --line: #d7e0ea;
+        --navy: #123047;
+        --dark: #0d2333;
+        --blue: #2563eb;
+        --blue-soft: #edf5ff;
+        --red: #dc2626;
+        --red-soft: #fff3f2;
+        --amber: #d97706;
+        --amber-soft: #fff7e8;
+        --green: #047857;
+        --green-soft: #e9f8f1;
+        --radius: 18px;
+        --shadow-sm: 0 8px 18px rgba(16, 32, 51, 0.06);
+        --shadow-md: 0 16px 42px rgba(16, 32, 51, 0.1);
+        --shadow-soft:
+          0 1px 0 rgba(255, 255, 255, 0.9) inset,
+          0 14px 35px rgba(16, 32, 51, 0.08);
+      }
+
+      body {
+        background:
+          radial-gradient(
+            circle at 0% 0%,
+            rgba(4, 120, 87, 0.12),
+            transparent 34%
+          ),
+          radial-gradient(
+            circle at 100% 0%,
+            rgba(37, 99, 235, 0.1),
+            transparent 30%
+          ),
+          linear-gradient(180deg, #f6f8fb 0%, #edf3f6 42%, #eef3f6 100%);
+        color: var(--ink);
+        font-feature-settings: "tnum";
+      }
+
+      header {
+        position: relative;
+        padding: 32px 42px 30px;
+        background: linear-gradient(
+          120deg,
+          rgba(4, 120, 87, 0.96) 0%,
+          rgba(13, 35, 51, 0.98) 54%,
+          rgba(18, 48, 71, 0.98) 100%
+        );
+        border-bottom: 0;
+        box-shadow: 0 22px 55px rgba(13, 35, 51, 0.22);
+        overflow: hidden;
+      }
+      header::before {
+        content: "";
+        position: absolute;
+        inset: -120px -120px auto auto;
+        width: 360px;
+        height: 360px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.09);
+      }
+      header::after {
+        content: "";
+        position: absolute;
+        inset: auto auto -130px -90px;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: rgba(34, 197, 94, 0.12);
+      }
+      .header-inner {
+        position: relative;
+        z-index: 1;
+      }
+      h1 {
+        font-size: 30px;
+        letter-spacing: -0.055em;
+        line-height: 1.2;
+      }
+      .subtitle {
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 600;
+      }
+      .period {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+        font-weight: 800;
+      }
+
+      main {
+        padding: 28px 28px 84px;
+      }
+
+      .tab-nav {
+        top: 0;
+        background: rgba(246, 248, 251, 0.86);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgba(215, 224, 234, 0.85);
+        box-shadow: 0 10px 25px rgba(16, 32, 51, 0.05);
+      }
+      .nav-inner {
+        padding: 13px 28px;
+        gap: 10px;
+      }
+      .tab-button {
+        border-radius: 999px;
+        border-color: rgba(215, 224, 234, 0.9);
+        background: rgba(255, 255, 255, 0.86);
+        color: #4f6075;
+        padding: 10px 16px;
+        box-shadow: 0 5px 14px rgba(16, 32, 51, 0.04);
+        transition:
+          background 0.18s ease,
+          color 0.18s ease,
+          border 0.18s ease,
+          transform 0.18s ease,
+          box-shadow 0.18s ease;
+      }
+      .tab-button:hover {
+        transform: translateY(-1px);
+        background: #ffffff;
+        box-shadow: 0 10px 22px rgba(16, 32, 51, 0.08);
+      }
+      .tab-button.active {
+        background: linear-gradient(135deg, #0f766e, #123047);
+        border-color: transparent;
+        color: #ffffff;
+        box-shadow: 0 13px 26px rgba(15, 118, 110, 0.22);
+      }
+
+      .section {
+        border: 1px solid rgba(215, 224, 234, 0.9);
+        border-radius: 22px;
+        padding: 26px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-soft);
+      }
+      .section-title {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #edf2f7;
+      }
+      h2 {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 23px;
+        color: #102033;
+      }
+      h2::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 22px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #10b981, #2563eb);
+      }
+      h3 {
+        color: #13283d;
+      }
+      .desc {
+        color: #64748b;
+      }
+
+      .kpi,
+      .evidence-card,
+      .insight-card,
+      .plain-card,
+      .process-card,
+      .basis-card,
+      .analysis-chart-card,
+      .vendor-pie-card,
+      .comparison-card,
+      .bar-chart-card,
+      .dataset-desc-card,
+      .action-card {
+        border-color: rgba(215, 224, 234, 0.95);
+        box-shadow: var(--shadow-sm);
+      }
+      .kpi {
+        position: relative;
+        overflow: hidden;
+        padding: 18px 17px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      }
+      .kpi::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 5px;
+        height: 100%;
+        background: linear-gradient(180deg, #0f766e, #60a5fa);
+      }
+      .kpi.danger::before {
+        background: linear-gradient(180deg, #dc2626, #fb923c);
+      }
+      .kpi .label {
+        color: #5b6b7f;
+        letter-spacing: -0.02em;
+      }
+      .kpi .value {
+        color: #0f2134;
+      }
+
+      .flow-step,
+      .note-box,
+      .callout,
+      .basis-row,
+      .dataset-desc-card {
+        border-radius: 16px;
+      }
+      .flow-step {
+        background: linear-gradient(180deg, #fbfdff, #f7fafc);
+        box-shadow: 0 8px 18px rgba(16, 32, 51, 0.04);
+      }
+      .flow-step.highlight {
+        background: linear-gradient(180deg, #fff7f7, #fffefe);
+      }
+      .callout {
+        border-left: 0;
+        border: 1px solid #fecaca;
+        box-shadow: 0 10px 24px rgba(220, 38, 38, 0.07);
+      }
+      .note-box {
+        border-color: #c8d6e3;
+        background: linear-gradient(180deg, #fbfdff, #f7fafc);
+      }
+
+      .table-wrap,
+      .data-table-shell {
+        border-radius: 18px;
+        border-color: #dbe4ee;
+        box-shadow: 0 12px 26px rgba(16, 32, 51, 0.05);
+      }
+      table,
+      .data-table {
+        background: #ffffff;
+      }
+      th,
+      .data-table thead th {
+        background: #eef4f8;
+        color: #24364b;
+        border-bottom: 1px solid #dbe4ee;
+        font-weight: 950;
+      }
+      td,
+      .data-table tbody td {
+        border-bottom-color: #edf2f7;
+      }
+      tr:hover td,
+      .data-table tbody tr:hover td {
+        background: #f7fbff;
+      }
+      .focus-row td {
+        background: #fff8f6;
+      }
+
+      .badge,
+      .rate-chip,
+      .issue-chip {
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        box-shadow: 0 4px 10px rgba(16, 32, 51, 0.05);
+      }
+      .barcell,
+      .rankbar .barwrap,
+      .axisbar {
+        background-color: #eef3f8;
+        border-color: #dbe4ee;
+      }
+      .rankbar,
+      .rankbar2 {
+        border-bottom-color: #edf2f7;
+      }
+
+      .insight-card,
+      .plain-card,
+      .evidence-card {
+        background: linear-gradient(180deg, #ffffff, #fbfdff);
+      }
+      .evidence-card .big {
+        color: #102033;
+      }
+      .evidence-card .small-label,
+      .action-card-title .area-label {
+        color: #5b6b7f;
+      }
+
+      .action-card {
+        border-radius: 22px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        box-shadow: var(--shadow-md);
+      }
+      .action-card::before {
+        height: 6px;
+        opacity: 0.9;
+      }
+      .team-badge {
+        box-shadow: 0 5px 14px rgba(16, 32, 51, 0.08);
+      }
+      .action-block {
+        border-radius: 16px;
+        background: #f8fbfd;
+        border-color: #e3ebf3;
+      }
+      .action-list li {
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 12px;
+        padding: 8px 9px 8px 22px;
+      }
+      .action-list li::before {
+        top: 16px;
+        left: 9px;
+      }
+
+      .vendor-pie-card,
+      .comparison-card,
+      .analysis-chart-card,
+      .bar-chart-card {
+        background: linear-gradient(180deg, #ffffff, #fbfdff);
+        border-radius: 22px;
+      }
+      .vendor-pie-card.focus {
+        background: linear-gradient(180deg, #fffafa, #ffffff);
+        box-shadow: 0 16px 36px rgba(220, 38, 38, 0.08);
+      }
+      .defect-legend-item,
+      .dataset-option,
+      .dataset-control select {
+        border-radius: 14px;
+        border-color: #dbe4ee;
+        box-shadow: 0 6px 14px rgba(16, 32, 51, 0.04);
+      }
+      .dataset-control select {
+        background-color: #fff;
+        font-weight: 850;
+      }
+
+      .chart-tooltip,
+      .custom-tooltip,
+      #customTooltip {
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 18px 36px rgba(13, 35, 51, 0.26) !important;
+        border-radius: 13px !important;
+      }
+
+      @media (max-width: 900px) {
+        .section {
+          padding: 20px;
+          border-radius: 18px;
+        }
+        header {
+          padding: 28px 24px;
+        }
+        main {
+          padding: 20px 18px 64px;
+        }
+        h1 {
+          font-size: 25px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <div>
+          <h1>GreenSound 문제 원인 분석 통합 대시보드</h1>
+          <p class="subtitle">
+            전체 제품 비교 후 눈에 띄는 제품을 선정하고, 고객 체감 이슈·반품
+            손실·위탁사 품질을 연결해 원인 후보를 확인합니다.
+          </p>
+        </div>
+        <div class="period">2025.07 ~ 2026.06 분석 보고용</div>
       </div>
-    </div>
-    <div class="grid kpis">
-      <div class="kpi"><div class="label">전체 추정 매출액</div><div class="value">484,526,920원</div><div class="note">판매수량 × 평균판매단가</div></div>
-      <div class="kpi"><div class="label">전체 판매수량</div><div class="value">12,294개</div><div class="note">월별 판매 데이터 기준</div></div>
-      <div class="kpi"><div class="label">총 반품건수</div><div class="value">1,196건</div><div class="note">반품 검사 데이터 기준</div></div>
-      <div class="kpi danger"><div class="label">TWS-300 반품률</div><div class="value">14.18%</div><div class="note">전체 제품 중 최고</div></div>
-      <div class="kpi danger"><div class="label">TWS-300 손실처리</div><div class="value">128건</div><div class="note">리퍼+교환+폐기</div></div>
-      <div class="kpi"><div class="label">A정밀 입고 불량률</div><div class="value">2.23%</div><div class="note">3개 위탁처 중 최고</div></div>
-    </div>
+    </header>
 
-    <div class="flow">
-      <div class="flow-step"><strong>① 전체 제품 비교</strong><p>판매, 반품률, 리뷰 불만, CS 문의를 함께 비교했습니다.</p></div>
-      <div class="flow-step highlight"><strong>② TWS-300 선정</strong><p>반품률 14.18%, 연결/페어링 리뷰 34건, CS 26건으로 가장 눈에 띕니다.</p></div>
-      <div class="flow-step"><strong>③ 손실 영향 확인</strong><p>TWS-300 × A정밀 조합에서 손실처리 128건이 확인됩니다.</p></div>
-      <div class="flow-step"><strong>④ 원인 후보 분리</strong><p>사용법·안내 이슈와 위탁사 품질 점검을 동시에 봐야 합니다.</p></div>
-    </div>
-  </section>
-
-  <section class="section" id="all-products">
-    <div class="section-title">
-      <div>
-        <h2>2. 전체 제품 비교</h2>
-        <p class="desc">리뷰·CS·반품을 전체 제품 기준으로 먼저 비교했습니다. 이 단계에서 TWS-300이 우선 확인 대상으로 도출됩니다.</p>
+    <nav class="tab-nav" aria-label="대시보드 탭 메뉴">
+      <div class="nav-inner" role="tablist">
+        <button
+          class="tab-button active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          data-tab="summary"
+        >
+          1. 분석 결론
+        </button>
+        <button
+          class="tab-button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tab="all-products"
+        >
+          2. 전체 제품 비교
+        </button>
+        <button
+          class="tab-button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tab="tws300"
+        >
+          3. TWS-300 심층
+        </button>
+        <button
+          class="tab-button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tab="vendor"
+        >
+          4. 위탁사 품질
+        </button>
+        <button
+          class="tab-button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tab="action"
+        >
+          5. 개선 과제
+        </button>
+        <button
+          class="tab-button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tab="data-browser"
+        >
+          6. 데이터 구조 예시
+        </button>
       </div>
-    </div>
-    <div class="grid cols2">
-      <div>
-        <h3>제품별 반품률 및 고객 이슈 집중도</h3>
-        <div class="rankbars"><div class="rankbar active">
-      <div class="rank-meta"><strong>TWS-300</strong><span>14.18% · 고객이슈 60건</span></div>
-      <div class="barwrap"><i style="width:100.0%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>TWS-200</strong><span>8.91% · 고객이슈 27건</span></div>
-      <div class="barwrap"><i style="width:62.8%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>AIR-50</strong><span>9.51% · 고객이슈 23건</span></div>
-      <div class="barwrap"><i style="width:67.1%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>BONE-100</strong><span>10.32% · 고객이슈 31건</span></div>
-      <div class="barwrap"><i style="width:72.8%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>BONE-200</strong><span>7.20% · 고객이슈 19건</span></div>
-      <div class="barwrap"><i style="width:50.8%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>GH-90</strong><span>8.37% · 고객이슈 12건</span></div>
-      <div class="barwrap"><i style="width:59.0%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>BOOM-10</strong><span>6.96% · 고객이슈 18건</span></div>
-      <div class="barwrap"><i style="width:49.1%"></i></div>
-    </div>
-<div class="rankbar ">
-      <div class="rank-meta"><strong>SBAR-20</strong><span>8.99% · 고객이슈 15건</span></div>
-      <div class="barwrap"><i style="width:63.4%"></i></div>
-    </div></div>
-      </div>
-      <div class="note-box">
-        <strong>해석</strong><br>
-        TWS-300은 판매수량이 가장 많고 반품률도 가장 높습니다. 리뷰와 CS 모두 연결/페어링 이슈가 겹치므로,
-        단순 품질 불량만이 아니라 초기 사용법, 멀티포인트 안내, 반품 전 자가진단 절차까지 함께 확인해야 합니다.
-      </div>
-    </div>
+    </nav>
 
-    <div class="table-wrap" style="margin-top:18px">
-      <table>
-        <thead>
-          <tr>
-            <th>제품</th><th>판매수량</th><th>반품건수</th><th>반품률</th><th>리뷰/평점</th><th>리뷰 주요 불만</th><th>CS문의</th><th>CS 최다유형</th><th>판단</th>
-          </tr>
-        </thead>
-        <tbody>
-      <tr class="focus-row">
-        <td><strong>TWS-300</strong><span>완전무선 이어폰(멀티포인트)</span></td>
-        <td>2,249</td>
-        <td>319</td>
-        <td><div class="barcell"><b>14.18%</b><i style="width:100.0%"></i></div></td>
-        <td>107건 / 4.09</td>
-        <td>연결/페어링 34건</td>
-        <td>36건</td>
-        <td>페어링·연결 26건</td>
-        <td><span class="badge danger">우선 확인</span></td>
-      </tr>
+    <main>
+      <section class="section tab-panel active" id="summary" role="tabpanel">
+        <div class="section-title">
+          <div>
+            <h2>1. 분석 결론</h2>
+            <p class="desc">
+              특정 제품을 먼저 정해놓고 본 것이 아니라, 전체 제품 비교 결과에서
+              TWS-300이 가장 눈에 띄어 심층 확인 대상으로 선정했습니다.
+            </p>
+          </div>
+        </div>
+        <div class="grid kpis">
+          <div class="kpi">
+            <div class="label">전체 추정 매출액</div>
+            <div class="value">484,526,920원</div>
+            <div class="note">판매수량 × 평균판매단가</div>
+          </div>
+          <div class="kpi">
+            <div class="label">전체 판매수량</div>
+            <div class="value">12,294개</div>
+            <div class="note">월별 판매 데이터 기준</div>
+          </div>
+          <div class="kpi">
+            <div class="label">총 반품건수</div>
+            <div class="value">1,196건</div>
+            <div class="note">반품 검사 데이터 기준</div>
+          </div>
+          <div class="kpi danger">
+            <div class="label">TWS-300 반품률</div>
+            <div class="value">14.18%</div>
+            <div class="note">전체 제품 중 최고</div>
+          </div>
+          <div class="kpi danger">
+            <div class="label">TWS-300 손실처리</div>
+            <div class="value">128건</div>
+            <div class="note">리퍼+교환+폐기</div>
+          </div>
+          <div class="kpi">
+            <div class="label">A정밀 입고 불량률</div>
+            <div class="value">2.23%</div>
+            <div class="note">3개 위탁사 중 최고</div>
+          </div>
+        </div>
 
-      <tr class="">
-        <td><strong>TWS-200</strong><span>완전무선 이어폰</span></td>
-        <td>2,133</td>
-        <td>190</td>
-        <td><div class="barcell"><b>8.91%</b><i style="width:62.8%"></i></div></td>
-        <td>83건 / 4.41</td>
-        <td>연결/페어링 14건</td>
-        <td>31건</td>
-        <td>페어링·연결 13건</td>
-        <td><span class="badge danger">우선 확인</span></td>
-      </tr>
+        <div class="flow">
+          <div class="flow-step">
+            <strong>① 전체 제품 비교</strong>
+            <p>판매, 반품률, 리뷰 불만, CS 문의를 함께 비교했습니다.</p>
+          </div>
+          <div class="flow-step highlight">
+            <strong>② TWS-300 선정</strong>
+            <p>
+              반품률 14.18%, 연결·페어링 리뷰 34건, CS 26건으로 가장 눈에
+              띕니다.
+            </p>
+          </div>
+          <div class="flow-step">
+            <strong>③ 손실 영향 확인</strong>
+            <p>TWS-300 × A정밀 조합에서 손실처리 128건이 확인됩니다.</p>
+          </div>
+          <div class="flow-step">
+            <strong>④ 원인 후보 분리</strong>
+            <p>사용법·안내 이슈와 위탁사 품질 점검을 동시에 봐야 합니다.</p>
+          </div>
+        </div>
 
-      <tr class="">
-        <td><strong>AIR-50</strong><span>공기전도 이어폰</span></td>
-        <td>1,820</td>
-        <td>173</td>
-        <td><div class="barcell"><b>9.51%</b><i style="width:67.1%"></i></div></td>
-        <td>79건 / 4.35</td>
-        <td>충전/배터리·배송/포장 14건</td>
-        <td>25건</td>
-        <td>페어링·연결 9건</td>
-        <td><span class="badge info">관찰</span></td>
-      </tr>
+        <div class="subsection">
+          <h3>분석에 사용한 데이터 범위</h3>
+          <div class="compact-grid">
+            <div class="evidence-card">
+              <div class="small-label">추정 매출액·판매</div>
+              <div class="big">346행</div>
+              <p>
+                판매수량, 추정 매출액, 제품·채널별 추정 매출액, 반품률 분모로
+                활용했습니다.
+              </p>
+            </div>
+            <div class="evidence-card">
+              <div class="small-label">반품 검사</div>
+              <div class="big">1,196건</div>
+              <p>
+                고객신고사유, 검사판정, 처리결과, 로트 분석의 기준 데이터입니다.
+              </p>
+            </div>
+            <div class="evidence-card">
+              <div class="small-label">리뷰·CS</div>
+              <div class="big">512 / 300건</div>
+              <p>
+                리뷰는 고객 평가, CS는 사용 중 문의로 분리해 고객 체감 문제를
+                확인했습니다.
+              </p>
+            </div>
+            <div class="evidence-card">
+              <div class="small-label">입고·불량 상세</div>
+              <div class="big">300 / 558행</div>
+              <p>
+                위탁사별 입고 품질과 제품·로트별 불량유형 확인에 사용했습니다.
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <tr class="">
-        <td><strong>BONE-100</strong><span>골전도 이어폰</span></td>
-        <td>1,531</td>
-        <td>158</td>
-        <td><div class="barcell"><b>10.32%</b><i style="width:72.8%"></i></div></td>
-        <td>77건 / 4.56</td>
-        <td>음질/소리·착용감 15건</td>
-        <td>37건</td>
-        <td>A/S 문의 16건</td>
-        <td><span class="badge danger">우선 확인</span></td>
-      </tr>
+        <div class="subsection two-col-note">
+          <div class="plain-card">
+            <b>핵심 발견</b>
+            <p>
+              전체 제품 비교 결과, TWS-300은 반품률과 연결·페어링 관련 고객
+              이슈가 동시에 높게 나타났습니다. 따라서 전체 제품 중 우선 심층
+              확인 대상으로 보는 것이 타당합니다.
+            </p>
+          </div>
+          <div class="plain-card">
+            <b>해석 방향</b>
+            <p>
+              반품률이 높다고 곧바로 제품 불량으로 단정하지 않고, 고객 안내 부족
+              가능성과 위탁사 품질 이슈를 분리해 확인하는 구조로 구성했습니다.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <tr class="">
-        <td><strong>BONE-200</strong><span>골전도 이어폰(방수)</span></td>
-        <td>1,333</td>
-        <td>96</td>
-        <td><div class="barcell"><b>7.20%</b><i style="width:50.8%"></i></div></td>
-        <td>51건 / 4.41</td>
-        <td>방수/오작동 11건</td>
-        <td>28건</td>
-        <td>A/S 문의 8건</td>
-        <td><span class="badge warn">관리 필요</span></td>
-      </tr>
+      <section class="section tab-panel" id="all-products" role="tabpanel">
+        <div class="section-title">
+          <div>
+            <h2>2. 전체 제품 비교</h2>
+            <p class="desc">
+              리뷰·CS·반품을 전체 제품 기준으로 먼저 비교했습니다. 이 단계에서
+              TWS-300이 우선 확인 대상으로 도출됩니다.
+            </p>
+          </div>
+        </div>
+        <div class="subsection">
+          <h3>제품별 추정 매출액 및 반품률 추가 비교</h3>
+          <p class="desc">
+            제품별 추정 매출액 규모와 반품률을 세로 막대그래프로 분리해
+            비교했습니다. 추정 매출액은 0원~1억 2천만 원, 반품률은 0~20% 절대축
+            기준으로 표시했습니다.
+          </p>
+          <div class="grid cols2">
+            <div class="bar-chart-card">
+              <h4>제품별 추정 매출액</h4>
+              <p class="chart-caption">
+                판매수량 × 평균판매단가 기준 추정 매출액입니다. 축 표기는 발표
+                이해도를 위해 원 단위 체감형 표현으로 정리했습니다.
+              </p>
+              <div
+                class="vertical-chart"
+                aria-label="제품별 추정 매출액 막대그래프"
+              >
+                <div class="v-scale">
+                  <span>1억 2천만</span><span>9천만</span><span>6천만</span
+                  ><span>3천만</span><span>0원</span>
+                </div>
+                <div class="v-chart-main">
+                  <div class="v-stage">
+                    <div class="v-item focus">
+                      <span class="v-value">1.0억</span
+                      ><i class="v-bar sales" style="height: 83.4%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">6,481만</span
+                      ><i class="v-bar sales" style="height: 54%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">6,060만</span
+                      ><i class="v-bar sales" style="height: 50.5%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">5,673만</span
+                      ><i class="v-bar sales" style="height: 47.3%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">6,965만</span
+                      ><i class="v-bar sales" style="height: 58%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">5,197만</span
+                      ><i class="v-bar sales" style="height: 43.3%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">3,084만</span
+                      ><i class="v-bar sales" style="height: 25.7%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">4,989만</span
+                      ><i class="v-bar sales" style="height: 41.6%"></i>
+                    </div>
+                  </div>
+                  <div class="v-labels">
+                    <span>TWS-300</span><span>TWS-200</span><span>AIR-50</span
+                    ><span>BONE-100</span><span>BONE-200</span><span>GH-90</span
+                    ><span>BOOM-10</span><span>SBAR-20</span>
+                  </div>
+                </div>
+              </div>
+              <p class="chart-foot">
+                ※ 매출 표기는 만 원 단위로 반올림했습니다. TWS-300은 매출과
+                반품률이 모두 높아 심층 확인 대상으로 표시했습니다.
+              </p>
+            </div>
+            <div class="bar-chart-card">
+              <h4>제품별 반품률</h4>
+              <p class="chart-caption">
+                반품건수 ÷ 판매수량 × 100 기준입니다. 20%를 상한으로 둔
+                절대축이라 막대가 과장되어 보이지 않도록 했습니다.
+              </p>
+              <div class="vertical-chart" aria-label="제품별 반품률 막대그래프">
+                <div class="v-scale">
+                  <span>20%</span><span>15%</span><span>10%</span><span>5%</span
+                  ><span>0%</span>
+                </div>
+                <div class="v-chart-main">
+                  <div class="v-stage">
+                    <div class="v-item focus">
+                      <span class="v-value">14.18%</span
+                      ><i class="v-bar return" style="height: 70.9%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">8.91%</span
+                      ><i class="v-bar return" style="height: 44.6%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">9.51%</span
+                      ><i class="v-bar return" style="height: 47.6%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">10.32%</span
+                      ><i class="v-bar return" style="height: 51.6%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">7.20%</span
+                      ><i class="v-bar return" style="height: 36%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">8.37%</span
+                      ><i class="v-bar return" style="height: 41.9%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">6.96%</span
+                      ><i class="v-bar return" style="height: 34.8%"></i>
+                    </div>
+                    <div class="v-item">
+                      <span class="v-value">8.99%</span
+                      ><i class="v-bar return" style="height: 45%"></i>
+                    </div>
+                  </div>
+                  <div class="v-labels">
+                    <span>TWS-300</span><span>TWS-200</span><span>AIR-50</span
+                    ><span>BONE-100</span><span>BONE-200</span><span>GH-90</span
+                    ><span>BOOM-10</span><span>SBAR-20</span>
+                  </div>
+                </div>
+              </div>
+              <p class="chart-foot">
+                ※ 반품률은 제품별 판매수량 대비 반품건수 기준입니다. TWS-300은
+                14.18%로 가장 높게 나타났습니다.
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <tr class="">
-        <td><strong>GH-90</strong><span>게이밍 헤드셋</span></td>
-        <td>1,218</td>
-        <td>102</td>
-        <td><div class="barcell"><b>8.37%</b><i style="width:59.0%"></i></div></td>
-        <td>37건 / 4.51</td>
-        <td>음질/소리 5건</td>
-        <td>31건</td>
-        <td>A/S 문의 7건</td>
-        <td><span class="badge info">관찰</span></td>
-      </tr>
+        <div class="table-wrap" style="margin-top: 18px">
+          <table class="product-summary-table">
+            <thead>
+              <tr>
+                <th>모델명</th>
+                <th>판매수량</th>
+                <th>반품건수</th>
+                <th>반품률</th>
+                <th>추정 매출액</th>
+                <th>CS건수</th>
+                <th>CS최다유형</th>
+                <th>리뷰 수</th>
+                <th>리뷰 주요 불만</th>
+                <th>평균 별점</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="focus-row">
+                <td>
+                  <strong>TWS-300</strong
+                  ><span>완전무선 이어폰(멀티포인트)</span>
+                </td>
+                <td>2,249</td>
+                <td>319</td>
+                <td class="rate-text focus-rate">14.18%</td>
+                <td>100,032,400원</td>
+                <td>36건</td>
+                <td>연결·페어링 26건</td>
+                <td>111건</td>
+                <td>연결·페어링 34건</td>
+                <td>4.09</td>
+              </tr>
+              <tr class="">
+                <td><strong>TWS-200</strong><span>완전무선 이어폰</span></td>
+                <td>2,133</td>
+                <td>190</td>
+                <td class="rate-text">8.91%</td>
+                <td>64,809,840원</td>
+                <td>31건</td>
+                <td>연결·페어링 13건</td>
+                <td>85건</td>
+                <td>연결·페어링 14건</td>
+                <td>4.41</td>
+              </tr>
+              <tr class="">
+                <td><strong>AIR-50</strong><span>공기전도 이어폰</span></td>
+                <td>1,820</td>
+                <td>173</td>
+                <td class="rate-text">9.51%</td>
+                <td>60,602,170원</td>
+                <td>25건</td>
+                <td>연결·페어링 9건</td>
+                <td>80건</td>
+                <td>충전/배터리·배송/포장 14건</td>
+                <td>4.35</td>
+              </tr>
+              <tr class="">
+                <td><strong>BONE-100</strong><span>골전도 이어폰</span></td>
+                <td>1,531</td>
+                <td>158</td>
+                <td class="rate-text">10.32%</td>
+                <td>56,733,990원</td>
+                <td>37건</td>
+                <td>A/S 문의 16건</td>
+                <td>79건</td>
+                <td>음질/소리·착용감 15건</td>
+                <td>4.56</td>
+              </tr>
+              <tr class="">
+                <td>
+                  <strong>BONE-200</strong><span>골전도 이어폰(방수)</span>
+                </td>
+                <td>1,333</td>
+                <td>96</td>
+                <td class="rate-text">7.20%</td>
+                <td>69,646,110원</td>
+                <td>28건</td>
+                <td>A/S 문의 8건</td>
+                <td>52건</td>
+                <td>방수/오작동 11건</td>
+                <td>4.41</td>
+              </tr>
+              <tr class="">
+                <td><strong>GH-90</strong><span>게이밍 헤드셋</span></td>
+                <td>1,218</td>
+                <td>102</td>
+                <td class="rate-text">8.37%</td>
+                <td>51,970,710원</td>
+                <td>31건</td>
+                <td>A/S 문의 7건</td>
+                <td>37건</td>
+                <td>음질/소리 5건</td>
+                <td>4.51</td>
+              </tr>
+              <tr class="">
+                <td><strong>BOOM-10</strong><span>블루투스 스피커</span></td>
+                <td>1,120</td>
+                <td>78</td>
+                <td class="rate-text">6.96%</td>
+                <td>30,836,820원</td>
+                <td>35건</td>
+                <td>사용법·설정 14건</td>
+                <td>34건</td>
+                <td>크기/공간 4건</td>
+                <td>4.39</td>
+              </tr>
+              <tr class="">
+                <td><strong>SBAR-20</strong><span>사운드바</span></td>
+                <td>890</td>
+                <td>80</td>
+                <td class="rate-text">8.99%</td>
+                <td>49,894,880원</td>
+                <td>31건</td>
+                <td>연결·페어링 10건</td>
+                <td>34건</td>
+                <td>연결·페어링 5건</td>
+                <td>4.39</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="table-note">
+            ※ 리뷰 수는 중복 노출을 포함한 원본 리뷰 기준입니다. 리뷰 주요
+            불만은 기존 분류 기준을 유지했습니다.
+          </p>
+        </div>
 
-      <tr class="">
-        <td><strong>BOOM-10</strong><span>블루투스 스피커</span></td>
-        <td>1,120</td>
-        <td>78</td>
-        <td><div class="barcell"><b>6.96%</b><i style="width:49.1%"></i></div></td>
-        <td>33건 / 4.39</td>
-        <td>크기/공간 4건</td>
-        <td>35건</td>
-        <td>사용법·설정 14건</td>
-        <td><span class="badge warn">관리 필요</span></td>
-      </tr>
+        <div class="subsection">
+          <h3>전체 제품 비교에서 확인한 추가 포인트</h3>
+          <div class="compact-grid three">
+            <div class="insight-card">
+              <span class="tag">반품률</span>
+              <h4>TWS-300 14.18%</h4>
+              <p>
+                전체 제품 중 반품률이 가장 높습니다. 판매량이 높은 제품이면서
+                반품률도 함께 높아 단순 건수 이슈로 보기 어렵습니다.
+              </p>
+            </div>
+            <div class="insight-card">
+              <span class="tag">고객 이슈</span>
+              <h4>리뷰·CS 동시 반복</h4>
+              <p>
+                연결·페어링 이슈가 리뷰와 CS에서 함께 나타납니다. 구매 후 평가와
+                사용 중 문의가 같은 방향을 가리킵니다.
+              </p>
+            </div>
+            <div class="insight-card">
+              <span class="tag">비교 기준</span>
+              <h4>우선 확인 제품 도출</h4>
+              <p>
+                BONE-100, SBAR-20도 관리 필요 신호가 있으나, 반품률·이슈
+                집중도·손실 규모를 함께 보면 TWS-300이 가장 먼저 확인할
+                대상입니다.
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <tr class="">
-        <td><strong>SBAR-20</strong><span>사운드바</span></td>
-        <td>890</td>
-        <td>80</td>
-        <td><div class="barcell"><b>8.99%</b><i style="width:63.4%"></i></div></td>
-        <td>33건 / 4.39</td>
-        <td>연결/페어링 5건</td>
-        <td>31건</td>
-        <td>페어링·연결 10건</td>
-        <td><span class="badge danger">우선 확인</span></td>
-      </tr></tbody>
-      </table>
-    </div>
-  </section>
+        <div class="subsection mini-table">
+          <h3>제품별 주요 고객 체감 이슈 요약</h3>
+          <p class="desc">
+            리뷰 주요 불만과 CS 최다유형을 함께 보며, 고객이 실제로 어떤 문제를
+            체감했는지 확인합니다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>제품</th>
+                  <th>리뷰에서 확인된 내용</th>
+                  <th>CS에서 확인된 내용</th>
+                  <th>해석</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="focus-row">
+                  <td><strong>TWS-300</strong></td>
+                  <td>연결·페어링 34건</td>
+                  <td>연결·페어링 26건</td>
+                  <td>리뷰와 CS 모두 동일 유형으로 집중되어 심층 분석 필요</td>
+                </tr>
+                <tr>
+                  <td><strong>TWS-200</strong></td>
+                  <td>연결·페어링 14건</td>
+                  <td>연결·페어링 13건</td>
+                  <td>TWS 계열 공통 안내 개선 후보</td>
+                </tr>
+                <tr>
+                  <td><strong>BONE-100</strong></td>
+                  <td>음질/소리·착용감 15건</td>
+                  <td>A/S 문의 16건</td>
+                  <td>제품 사용 경험과 사후관리 문의를 함께 확인</td>
+                </tr>
+                <tr>
+                  <td><strong>BOOM-10</strong></td>
+                  <td>크기/공간 4건</td>
+                  <td>사용법·설정 14건</td>
+                  <td>하자보다 사용법·설정 안내 보완 가능성</td>
+                </tr>
+                <tr>
+                  <td><strong>SBAR-20</strong></td>
+                  <td>연결·페어링 5건</td>
+                  <td>연결·페어링 10건</td>
+                  <td>반품 규모는 작지만 연결 안내 보완 후보</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-  <section class="section" id="tws300">
-    <div class="section-title">
-      <div>
-        <h2>3. TWS-300 심층 분석</h2>
-        <p class="desc">전체 비교에서 TWS-300이 가장 눈에 띄었기 때문에, 고객 체감 이슈와 손실 처리 흐름을 별도로 확인했습니다.</p>
-      </div>
-    </div>
+      <section class="section tab-panel" id="tws300" role="tabpanel">
+        <div class="section-title">
+          <div>
+            <h2>3. TWS-300 심층 분석</h2>
+            <p class="desc">
+              전체 비교에서 TWS-300이 가장 눈에 띄었기 때문에, 고객 체감 이슈와
+              손실 처리 흐름을 별도로 확인했습니다.
+            </p>
+          </div>
+        </div>
 
-    <div class="callout">
-      <strong>핵심 진단</strong>
-      <p>TWS-300은 반품률 14.18%, 리뷰 연결/페어링 34건, CS 페어링·연결 26건, 작동·연결 반품 134건이 함께 나타납니다. 손실처리건수도 128건으로 가장 커서 우선 점검 대상입니다.</p>
-    </div>
+        <div class="callout">
+          <strong>핵심 진단</strong>
+          <p>
+            TWS-300은 반품률 14.18%, 리뷰 연결·페어링 34건, CS 연결·페어링 26건,
+            작동·연결 반품 134건이 함께 나타납니다. 손실처리건수도 128건으로
+            가장 커서 우선 점검 대상입니다.
+          </p>
+        </div>
 
-    <div class="grid cols3">
-      <div class="insight-card"><span class="tag">고객 체감</span><h4>연결/페어링 이슈 반복</h4><p>리뷰와 CS 모두 연결/페어링으로 집중되어 고객이 실제 사용 초기에 어려움을 느꼈을 가능성이 큽니다.</p></div>
-      <div class="insight-card"><span class="tag">반품 손실</span><h4>손실처리 128건</h4><p>리퍼 전환, 교환 출고, 폐기로 이어진 처리 건수를 기준으로 보면 TWS-300의 비용 영향이 큽니다.</p></div>
-      <div class="insight-card"><span class="tag">원인 후보</span><h4>A정밀 생산 로트 집중</h4><p>문제 조합은 TWS-300 × A정밀입니다. 다만 제품 특성과 위탁처가 함께 묶여 있어 위탁처 단독 원인으로 단정하지 않습니다.</p></div>
-    </div>
+        <div class="grid cols3">
+          <div class="insight-card">
+            <span class="tag">고객 체감</span>
+            <h4>연결·페어링 이슈 반복</h4>
+            <p>
+              리뷰와 CS 모두 연결·페어링으로 집중되어 고객이 실제 사용 초기에
+              어려움을 느꼈을 가능성이 큽니다.
+            </p>
+          </div>
+          <div class="insight-card">
+            <span class="tag">반품 손실</span>
+            <h4>손실처리 128건</h4>
+            <p>
+              리퍼 전환, 교환 출고, 폐기로 이어진 처리 건수를 기준으로 보면
+              TWS-300의 비용 영향이 큽니다.
+            </p>
+          </div>
+          <div class="insight-card">
+            <span class="tag">원인 후보</span>
+            <h4>A정밀 생산 로트 집중</h4>
+            <p>
+              문제 조합은 TWS-300 × A정밀입니다. 다만 제품 특성과 위탁사가 함께
+              묶여 있어 위탁사 단독 원인으로 단정하지 않습니다.
+            </p>
+          </div>
+        </div>
 
-    <h3 style="margin-top:20px">손실 위험 로트 TOP 10</h3>
-    <p class="desc">손실 처리 건수는 리퍼 전환, 교환 출고, 폐기 건수를 합산한 값입니다.</p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>순위</th><th>모델코드</th><th>로트번호</th><th>위탁처</th><th>반품건수</th><th>주요 고객신고사유</th><th>손실 처리 건수</th><th>리퍼</th><th>교환</th><th>폐기</th>
-          </tr>
-        </thead>
-        <tbody><tr class="focus-row">
-      <td>1</td><td><strong>TWS-300</strong></td><td>L2602-A01</td><td>A정밀</td>
-      <td>71</td><td>작동·연결 불량 38건</td><td><strong>29</strong></td>
-      <td>19</td><td>5</td><td>5</td>
-    </tr>
-<tr class="focus-row">
-      <td>2</td><td><strong>TWS-300</strong></td><td>L2603-A01</td><td>A정밀</td>
-      <td>67</td><td>작동·연결 불량 32건</td><td><strong>28</strong></td>
-      <td>19</td><td>7</td><td>2</td>
-    </tr>
-<tr class="focus-row">
-      <td>3</td><td><strong>TWS-300</strong></td><td>L2604-A01</td><td>A정밀</td>
-      <td>48</td><td>작동·연결 불량 16건</td><td><strong>20</strong></td>
-      <td>14</td><td>5</td><td>1</td>
-    </tr>
-<tr class="focus-row">
-      <td>4</td><td><strong>TWS-300</strong></td><td>L2601-A01</td><td>A정밀</td>
-      <td>56</td><td>작동·연결 불량 25건</td><td><strong>19</strong></td>
-      <td>11</td><td>4</td><td>4</td>
-    </tr>
-<tr class="focus-row">
-      <td>5</td><td><strong>TWS-300</strong></td><td>L2605-A01</td><td>A정밀</td>
-      <td>24</td><td>파손·외관 불량 6건</td><td><strong>14</strong></td>
-      <td>9</td><td>1</td><td>4</td>
-    </tr>
-<tr class="focus-row">
-      <td>6</td><td><strong>TWS-300</strong></td><td>L2512-A01</td><td>A정밀</td>
-      <td>28</td><td>작동·연결 불량 9건</td><td><strong>12</strong></td>
-      <td>9</td><td>2</td><td>1</td>
-    </tr>
-<tr class="">
-      <td>7</td><td><strong>TWS-200</strong></td><td>L2511-A02</td><td>A정밀</td>
-      <td>27</td><td>단순변심 7건</td><td><strong>12</strong></td>
-      <td>7</td><td>2</td><td>3</td>
-    </tr>
-<tr class="">
-      <td>8</td><td><strong>BONE-100</strong></td><td>L2511-B04</td><td>B사운드</td>
-      <td>15</td><td>단순변심 4건</td><td><strong>12</strong></td>
-      <td>8</td><td>2</td><td>2</td>
-    </tr>
-<tr class="">
-      <td>9</td><td><strong>AIR-50</strong></td><td>L2511-B03</td><td>B사운드</td>
-      <td>19</td><td>단순변심 6건</td><td><strong>11</strong></td>
-      <td>8</td><td>2</td><td>1</td>
-    </tr>
-<tr class="">
-      <td>10</td><td><strong>AIR-50</strong></td><td>L2604-B03</td><td>B사운드</td>
-      <td>16</td><td>작동·연결 불량 6건</td><td><strong>11</strong></td>
-      <td>6</td><td>3</td><td>2</td>
-    </tr></tbody>
-      </table>
-    </div>
-  </section>
+        <div class="subsection tws-added-section">
+          <h3>TWS-300 추가 분석: 월별 반품률·리뷰 평점·연결·페어링 문의</h3>
+          <p class="desc">
+            TWS-300은 2026년 2월 출시 신모델이므로, 출시 이후 월별 고객 반응과
+            반품 접수 흐름을 함께 확인했습니다.
+          </p>
+          <div class="analysis-chart-grid" style="margin-top: 14px">
+            <div class="analysis-chart-card">
+              <h4>월별 반품률 및 리뷰 평점</h4>
+              <p class="chart-caption">
+                반품률은 반품접수일 기준 반품건수 ÷ 해당 월 판매수량입니다.
+                수치는 그래프 점에 마우스를 올리면 확인할 수 있습니다.
+              </p>
+              <div class="chart-legend">
+                <span><i class="legend-dot legend-return"></i>반품률</span>
+                <span><i class="legend-dot legend-rating"></i>평균 별점</span>
+              </div>
+              <svg
+                class="svg-chart"
+                viewBox="0 0 430 300"
+                role="img"
+                aria-label="TWS-300 월별 반품률 및 리뷰 평점 꺾은선 그래프"
+              >
+                <rect
+                  x="0"
+                  y="0"
+                  width="430"
+                  height="300"
+                  rx="12"
+                  fill="#ffffff"
+                />
+                <line
+                  x1="50"
+                  y1="248"
+                  x2="385"
+                  y2="248"
+                  stroke="#e5eaf2"
+                  stroke-width="1"
+                />
+                <text
+                  x="42"
+                  y="252"
+                  text-anchor="end"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  0%
+                </text>
+                <line
+                  x1="50"
+                  y1="195"
+                  x2="385"
+                  y2="195"
+                  stroke="#e5eaf2"
+                  stroke-width="1"
+                />
+                <text
+                  x="42"
+                  y="199"
+                  text-anchor="end"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  5%
+                </text>
+                <line
+                  x1="50"
+                  y1="142"
+                  x2="385"
+                  y2="142"
+                  stroke="#e5eaf2"
+                  stroke-width="1"
+                />
+                <text
+                  x="42"
+                  y="146"
+                  text-anchor="end"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  10%
+                </text>
+                <line
+                  x1="50"
+                  y1="89"
+                  x2="385"
+                  y2="89"
+                  stroke="#e5eaf2"
+                  stroke-width="1"
+                />
+                <text
+                  x="42"
+                  y="93"
+                  text-anchor="end"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  15%
+                </text>
+                <line
+                  x1="50"
+                  y1="36"
+                  x2="385"
+                  y2="36"
+                  stroke="#e5eaf2"
+                  stroke-width="1"
+                />
+                <text
+                  x="42"
+                  y="40"
+                  text-anchor="end"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  20%
+                </text>
+                <text
+                  x="397"
+                  y="252"
+                  text-anchor="start"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  3.5
+                </text>
+                <text
+                  x="397"
+                  y="146"
+                  text-anchor="start"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  4.0
+                </text>
+                <text
+                  x="397"
+                  y="40"
+                  text-anchor="start"
+                  font-size="10"
+                  fill="#98a2b3"
+                  font-weight="800"
+                >
+                  4.5
+                </text>
+                <line x1="50" y1="36" x2="50" y2="248" stroke="#cfd6e2" />
+                <line x1="385" y1="36" x2="385" y2="248" stroke="#cfd6e2" />
+                <line x1="50" y1="248" x2="385" y2="248" stroke="#cfd6e2" />
+                <text
+                  x="50"
+                  y="22"
+                  text-anchor="start"
+                  font-size="10"
+                  fill="#667085"
+                  font-weight="900"
+                >
+                  반품률
+                </text>
+                <text
+                  x="385"
+                  y="22"
+                  text-anchor="end"
+                  font-size="10"
+                  fill="#667085"
+                  font-weight="900"
+                >
+                  평균 별점
+                </text>
+                <polyline
+                  points="62,163.8 144,81.5 226,66.7 308,68.6 370,102.8"
+                  fill="none"
+                  stroke="#e69a2c"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <polyline
+                  points="62,101.7 144,67.8 226,118.7 308,127.2 370,197.1"
+                  fill="none"
+                  stroke="#2f6fed"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle
+                  cx="62"
+                  cy="163.8"
+                  r="5"
+                  fill="#e69a2c"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="2월 반품률 7.94%"
+                ></circle>
+                <circle
+                  cx="144"
+                  cy="81.5"
+                  r="5"
+                  fill="#e69a2c"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="3월 반품률 15.71%"
+                ></circle>
+                <circle
+                  cx="226"
+                  cy="66.7"
+                  r="5"
+                  fill="#e69a2c"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="4월 반품률 17.10%"
+                ></circle>
+                <circle
+                  cx="308"
+                  cy="68.6"
+                  r="5"
+                  fill="#e69a2c"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="5월 반품률 16.92%"
+                ></circle>
+                <circle
+                  cx="370"
+                  cy="102.8"
+                  r="5"
+                  fill="#e69a2c"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="6월 반품률 13.70%"
+                ></circle>
+                <circle
+                  cx="62"
+                  cy="101.7"
+                  r="5"
+                  fill="#2f6fed"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="2월 평균 별점 4.19점"
+                ></circle>
+                <circle
+                  cx="144"
+                  cy="67.8"
+                  r="5"
+                  fill="#2f6fed"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="3월 평균 별점 4.35점"
+                ></circle>
+                <circle
+                  cx="226"
+                  cy="118.7"
+                  r="5"
+                  fill="#2f6fed"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="4월 평균 별점 4.11점"
+                ></circle>
+                <circle
+                  cx="308"
+                  cy="127.2"
+                  r="5"
+                  fill="#2f6fed"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="5월 평균 별점 4.07점"
+                ></circle>
+                <circle
+                  cx="370"
+                  cy="197.1"
+                  r="5"
+                  fill="#2f6fed"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                  class="tooltip-trigger"
+                  data-tooltip="6월 평균 별점 3.74점"
+                ></circle>
+                <text
+                  x="62"
+                  y="278"
+                  text-anchor="middle"
+                  font-size="11"
+                  fill="#344054"
+                  font-weight="900"
+                >
+                  2월
+                </text>
+                <text
+                  x="144"
+                  y="278"
+                  text-anchor="middle"
+                  font-size="11"
+                  fill="#344054"
+                  font-weight="900"
+                >
+                  3월
+                </text>
+                <text
+                  x="226"
+                  y="278"
+                  text-anchor="middle"
+                  font-size="11"
+                  fill="#344054"
+                  font-weight="900"
+                >
+                  4월
+                </text>
+                <text
+                  x="308"
+                  y="278"
+                  text-anchor="middle"
+                  font-size="11"
+                  fill="#344054"
+                  font-weight="900"
+                >
+                  5월
+                </text>
+                <text
+                  x="370"
+                  y="278"
+                  text-anchor="middle"
+                  font-size="11"
+                  fill="#344054"
+                  font-weight="900"
+                >
+                  6월
+                </text>
+              </svg>
+            </div>
 
-  <section class="section" id="vendor">
-    <div class="section-title">
-      <div>
-        <h2>4. 위탁사 품질 및 문제 발생 위치</h2>
-        <p class="desc">로트번호는 위탁사와 연결되므로, 발표용 분석에서는 개별 로트보다 제품 × 위탁처 단위로 보는 것이 적절합니다.</p>
-      </div>
-    </div>
+            <div class="analysis-chart-card">
+              <h4>월별 CS 접수 문의</h4>
+              <p class="chart-caption">
+                문의일 기준 TWS-300 CS 문의를 연결·페어링과 기타 유형으로 나눠
+                누적형 세로 막대로 표시했습니다.
+              </p>
+              <div class="chart-legend">
+                <span
+                  ><i class="legend-dot legend-pairing"></i>연결·페어링</span
+                >
+                <span><i class="legend-dot legend-other"></i>기타</span>
+              </div>
+              <div class="cs-stacked-bars">
+                <div class="cs-scale">
+                  <span>11건</span><span>8건</span><span>5건</span
+                  ><span>2건</span><span>0건</span>
+                </div>
+                <div>
+                  <div class="cs-stage">
+                    <div class="cs-item">
+                      <div class="cs-stack" style="height: 45.5%">
+                        <i
+                          class="cs-seg pairing tooltip-trigger"
+                          style="height: 80%"
+                          data-tooltip="2월 연결·페어링: 4건"
+                        ></i
+                        ><i
+                          class="cs-seg other tooltip-trigger"
+                          style="height: 20%"
+                          data-tooltip="2월 기타: 1건"
+                        ></i>
+                      </div>
+                    </div>
+                    <div class="cs-item">
+                      <div class="cs-stack" style="height: 100%">
+                        <i
+                          class="cs-seg pairing tooltip-trigger"
+                          style="height: 72.7%"
+                          data-tooltip="3월 연결·페어링: 8건"
+                        ></i
+                        ><i
+                          class="cs-seg other tooltip-trigger"
+                          style="height: 27.3%"
+                          data-tooltip="3월 기타: 3건"
+                        ></i>
+                      </div>
+                    </div>
+                    <div class="cs-item">
+                      <div class="cs-stack" style="height: 72.7%">
+                        <i
+                          class="cs-seg pairing tooltip-trigger"
+                          style="height: 75%"
+                          data-tooltip="4월 연결·페어링: 6건"
+                        ></i
+                        ><i
+                          class="cs-seg other tooltip-trigger"
+                          style="height: 25%"
+                          data-tooltip="4월 기타: 2건"
+                        ></i>
+                      </div>
+                    </div>
+                    <div class="cs-item">
+                      <div class="cs-stack" style="height: 100%">
+                        <i
+                          class="cs-seg pairing tooltip-trigger"
+                          style="height: 72.7%"
+                          data-tooltip="5월 연결·페어링: 8건"
+                        ></i
+                        ><i
+                          class="cs-seg other tooltip-trigger"
+                          style="height: 27.3%"
+                          data-tooltip="5월 기타: 3건"
+                        ></i>
+                      </div>
+                    </div>
+                    <div class="cs-item">
+                      <div class="cs-stack" style="height: 9.1%">
+                        <i class="cs-seg pairing" style="height: 0%"></i
+                        ><i
+                          class="cs-seg other tooltip-trigger"
+                          style="height: 100%"
+                          data-tooltip="6월 기타: 1건"
+                        ></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="cs-labels">
+                <span>2월</span><span>3월</span><span>4월</span><span>5월</span
+                ><span>6월</span>
+              </div>
+            </div>
 
-    <h3>문제 발생 위치 요약</h3>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>제품</th><th>위탁처</th><th>로트수</th><th>반품건수</th><th>주요 고객신고사유</th><th>손실처리건수</th><th>분석 포인트</th>
-          </tr>
-        </thead>
-        <tbody><tr class="focus-row">
-      <td><strong>TWS-300</strong><span>완전무선 이어폰(멀티포인트)</span></td>
-      <td>A정밀</td><td>10</td><td>319</td><td>작동·연결 불량 134건</td>
-      <td><strong>128</strong></td><td>반품·손실처리 모두 최상위, 작동·연결 이슈 집중</td>
-    </tr>
-<tr class="">
-      <td><strong>TWS-200</strong><span>완전무선 이어폰</span></td>
-      <td>A정밀</td><td>15</td><td>190</td><td>작동·연결 불량 57건</td>
-      <td><strong>91</strong></td><td>손실처리 규모가 높아 후속 점검 필요</td>
-    </tr>
-<tr class="">
-      <td><strong>BONE-100</strong><span>골전도 이어폰</span></td>
-      <td>B사운드</td><td>16</td><td>158</td><td>작동·연결 불량 40건</td>
-      <td><strong>88</strong></td><td>제품별 착용감·연결·단순변심 이슈 분리 필요</td>
-    </tr>
-<tr class="">
-      <td><strong>AIR-50</strong><span>공기전도 이어폰</span></td>
-      <td>B사운드</td><td>16</td><td>173</td><td>단순변심 49건</td>
-      <td><strong>82</strong></td><td>제품별 착용감·연결·단순변심 이슈 분리 필요</td>
-    </tr>
-<tr class="">
-      <td><strong>GH-90</strong><span>게이밍 헤드셋</span></td>
-      <td>C전자</td><td>16</td><td>102</td><td>작동·연결 불량 34건</td>
-      <td><strong>55</strong></td><td>반품 규모는 낮지만 폐기·리퍼 전환 여부 확인</td>
-    </tr>
-<tr class="">
-      <td><strong>BONE-200</strong><span>골전도 이어폰(방수)</span></td>
-      <td>B사운드</td><td>16</td><td>96</td><td>착용감·사이즈 22건</td>
-      <td><strong>46</strong></td><td>제품별 착용감·연결·단순변심 이슈 분리 필요</td>
-    </tr>
-<tr class="">
-      <td><strong>BOOM-10</strong><span>블루투스 스피커</span></td>
-      <td>C전자</td><td>15</td><td>78</td><td>작동·연결 불량 27건</td>
-      <td><strong>38</strong></td><td>반품 규모는 낮지만 폐기·리퍼 전환 여부 확인</td>
-    </tr>
-<tr class="">
-      <td><strong>SBAR-20</strong><span>사운드바</span></td>
-      <td>C전자</td><td>14</td><td>80</td><td>단순변심 30건</td>
-      <td><strong>32</strong></td><td>반품 규모는 낮지만 폐기·리퍼 전환 여부 확인</td>
-    </tr></tbody>
-      </table>
-    </div>
+            <div class="analysis-chart-card judge-card">
+              <h4>작동·연결 불량 신고건 검사판정</h4>
+              <p class="chart-caption">
+                고객신고사유가 작동·연결 불량인 TWS-300 반품 134건만 필터링한
+                검사판정 분포입니다.
+              </p>
+              <div class="chart-legend judge-summary">
+                <span>총 134건</span><span>이상 없음 76.1%</span
+                ><span>불량 확인 19.4%</span>
+              </div>
+              <div class="stacked-judge-wrap">
+                <div>
+                  <div
+                    class="stacked-column"
+                    aria-label="작동·연결 불량 신고건 검사판정 누적 막대"
+                  >
+                    <div
+                      class="stack-seg normal tooltip-trigger"
+                      style="height: 76.1%"
+                      data-tooltip="이상 없음(재현 불가): 102건 · 76.1%"
+                    >
+                      76.1%
+                    </div>
+                    <div
+                      class="stack-seg defect tooltip-trigger"
+                      style="height: 19.4%"
+                      data-tooltip="불량 확인: 26건 · 19.4%"
+                    >
+                      19.4%
+                    </div>
+                    <div
+                      class="stack-seg customer tooltip-trigger"
+                      style="height: 3.7%"
+                      data-tooltip="외관·고객과실: 5건 · 3.7%"
+                    ></div>
+                    <div
+                      class="stack-seg unopened tooltip-trigger"
+                      style="height: 0.7%"
+                      data-tooltip="미개봉: 1건 · 0.7%"
+                    ></div>
+                  </div>
+                </div>
+                <div class="stacked-legend">
+                  <div
+                    class="stacked-legend-row tooltip-trigger"
+                    data-tooltip="이상 없음(재현 불가): 102건 · 76.1%"
+                  >
+                    <i class="legend-dot legend-normal"></i
+                    ><span>이상 없음(재현 불가)<b>102건 · 76.1%</b></span>
+                  </div>
+                  <div
+                    class="stacked-legend-row tooltip-trigger"
+                    data-tooltip="불량 확인: 26건 · 19.4%"
+                  >
+                    <i class="legend-dot legend-defect"></i
+                    ><span>불량 확인<b>26건 · 19.4%</b></span>
+                  </div>
+                  <div
+                    class="stacked-legend-row tooltip-trigger"
+                    data-tooltip="외관·고객과실: 5건 · 3.7%"
+                  >
+                    <i class="legend-dot legend-customer"></i
+                    ><span>외관·고객과실<b>5건 · 3.7%</b></span>
+                  </div>
+                  <div
+                    class="stacked-legend-row tooltip-trigger"
+                    data-tooltip="미개봉: 1건 · 0.7%"
+                  >
+                    <i class="legend-dot legend-unopened"></i
+                    ><span>미개봉<b>1건 · 0.7%</b></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <h3 style="margin-top:20px">위탁처별 입고 품질</h3>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>위탁처</th><th>로트수</th><th>최종 불합격 로트</th><th>최종 불합격 비중</th><th>검사수량</th><th>불량수량</th><th>입고 불량률</th><th>불합격률</th><th>TOP 1</th><th>TOP 2</th><th>TOP 3</th>
-          </tr>
-        </thead>
-        <tbody><tr class="focus-row">
-      <td><strong>A정밀</strong></td><td>22</td><td>4개</td><td>18.2%</td>
-      <td>5,600</td><td>125</td><td><strong>2.23%</strong></td><td>14.75%</td>
-      <td>페어링모듈 64건 (51.2%)</td><td>배터리 39건 (31.2%)</td><td>납땜불량 9건 (7.2%)</td>
-    </tr>
-<tr class="">
-      <td><strong>B사운드</strong></td><td>36</td><td>1개</td><td>2.8%</td>
-      <td>12,750</td><td>229</td><td><strong>1.80%</strong></td><td>4.17%</td>
-      <td>페어링모듈 82건 (35.8%)</td><td>배터리 53건 (23.1%)</td><td>납땜불량 45건 (19.7%)</td>
-    </tr>
-<tr class="">
-      <td><strong>C전자</strong></td><td>36</td><td>0개</td><td>0.0%</td>
-      <td>13,250</td><td>204</td><td><strong>1.54%</strong></td><td>0.84%</td>
-      <td>납땜불량 82건 (40.2%)</td><td>배터리 37건 (18.1%)</td><td>페어링모듈 36건 (17.6%)</td>
-    </tr></tbody>
-      </table>
-    </div>
+          <div class="note-box full-note">
+            <strong>추가 분석 해석</strong><br />
+            월별 반품률은 4월 17.10%, 5월 16.92%로 높게 유지됐고, 리뷰 평점은
+            6월 3.74점으로 가장 낮았습니다. CS 문의는 3월과 5월에 총 11건씩
+            접수됐으며, 이 중 연결·페어링 문의가 각각 8건으로 가장 많았습니다.
+            또한 작동·연결 불량 신고 134건 중 102건은 검사에서 이상 없음 또는
+            재현 불가로 확인되어, 제품 불량뿐 아니라 페어링 방법, 멀티포인트
+            설정, 초기화 안내 부족 등 사용 경험 단계의 이슈를 함께 봐야 합니다.
+          </div>
 
-    <div class="note-box" style="margin-top:16px">
-      <strong>해석 주의</strong><br>
-      A정밀은 입고 불량률과 최종 불합격 로트 비중이 높게 나타나지만, TWS 계열 생산분이 A정밀에 집중되어 있습니다.
-      따라서 “A정밀 자체가 문제”라고 단정하기보다, TWS 계열 생산 로트와 페어링모듈·배터리 관련 공정 점검이 필요하다고 해석하는 것이 안전합니다.
-    </div>
-  </section>
+          <div class="mini-evidence">
+            <div class="evidence-card">
+              <div class="small-label">반품 접수 기준</div>
+              <div class="big">4월 17.10%</div>
+              <p>월별 반품률 최고치입니다. 5월도 16.92%로 높은 수준입니다.</p>
+            </div>
+            <div class="evidence-card">
+              <div class="small-label">연결·페어링 CS</div>
+              <div class="big">3월·5월 8건</div>
+              <p>연결·페어링 문의가 3월과 5월에 가장 많았습니다.</p>
+            </div>
+            <div class="evidence-card">
+              <div class="small-label">검사 결과</div>
+              <div class="big">76.1%</div>
+              <p>
+                작동·연결 불량 신고건 중 이상 없음 또는 재현 불가 판정
+                비중입니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  <section class="section" id="action">
-    <div class="section-title">
-      <div>
-        <h2>5. 개선 과제</h2>
-        <p class="desc">손실을 줄이기 위해서는 고객 안내 개선과 품질 점검을 동시에 진행하는 것이 적절합니다.</p>
-      </div>
-    </div>
+      <section class="section tab-panel" id="vendor" role="tabpanel">
+        <div class="section-title">
+          <div>
+            <h2>4. 위탁사 품질</h2>
+            <p class="desc">
+              로트번호는 위탁사와 연결되므로, 발표용 분석에서는 개별 로트보다
+              제품 × 위탁사 단위로 보는 것이 적절합니다.
+            </p>
+          </div>
+        </div>
 
-    <div class="decision">
-      <div>영역</div><div>확인된 문제</div><div>권장 조치</div>
-      <div><strong>상세페이지·콘텐츠</strong></div><div>TWS-300 연결/페어링 불만이 리뷰와 CS에서 반복</div><div>멀티포인트 연결법, 초기화 방법, 한쪽만 들릴 때 조치법을 상세페이지 상단과 FAQ에 배치</div>
-      <div><strong>CS·운영</strong></div><div>페어링 문의와 반품이 동시에 발생</div><div>반품 접수 전 30초 자가진단 안내, 페어링/리셋 안내 매크로 운영</div>
-      <div><strong>품질·위탁사</strong></div><div>TWS-300 × A정밀 생산 로트에서 손실처리 집중</div><div>A정밀 TWS 계열 로트의 페어링모듈·배터리 공정 점검, 불합격 로트 후속 확인</div>
-      <div><strong>데이터 관리</strong></div><div>리뷰·CS·반품이 고객ID/주문번호로 직접 연결되지 않음</div><div>주문ID 또는 고객 문의ID를 기준으로 리뷰, CS, 반품을 연결할 수 있는 관리 컬럼 추가</div>
-    </div>
+        <h3 style="margin-top: 20px">위탁사별 입고 품질</h3>
+        <p class="desc" style="margin-top: -6px">
+          계산 기준: 로트 검사 전체 횟수는 입고검사 행 수 기준입니다. 불합격
+          발생 로트 수는 중복 로트라도 검사에서 불합격이 발생한 경우 각각
+          1건으로 포함했으며, 로트 불합격률은 불합격 발생 로트 수 ÷ 로트 검사
+          전체 횟수 × 100으로 계산했습니다. 입고 불량률은 위탁사별 총 불량수량 ÷
+          총 검사수량입니다.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>위탁사</th>
+                <th>로트 수</th>
+                <th>로트 검사 전체 횟수</th>
+                <th>
+                  불합격 발생 로트 수<br /><span
+                    style="font-size: 11px; color: #64748b"
+                    >(중복 로트 포함)</span
+                  >
+                </th>
+                <th>로트 불합격률</th>
+                <th>검사수량</th>
+                <th>불량수량</th>
+                <th>입고 불량률</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="focus-row">
+                <td>1</td>
+                <td><strong>A정밀</strong></td>
+                <td>22개</td>
+                <td>61건</td>
+                <td>9건</td>
+                <td><strong>14.75%</strong></td>
+                <td>5,600개</td>
+                <td>125개</td>
+                <td><strong>2.23%</strong></td>
+              </tr>
+              <tr class="">
+                <td>2</td>
+                <td><strong>B사운드</strong></td>
+                <td>36개</td>
+                <td>120건</td>
+                <td>5건</td>
+                <td><strong>4.17%</strong></td>
+                <td>12,750개</td>
+                <td>229개</td>
+                <td><strong>1.80%</strong></td>
+              </tr>
+              <tr class="">
+                <td>3</td>
+                <td><strong>C전자</strong></td>
+                <td>36개</td>
+                <td>119건</td>
+                <td>1건</td>
+                <td><strong>0.84%</strong></td>
+                <td>13,250개</td>
+                <td>204개</td>
+                <td><strong>1.54%</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-    <p class="foot">
-      분석 기준: 리뷰/CS는 고객 체감 문제 확인용, 반품·처리결과는 손실 영향 확인용, 입고검사·불량상세는 위탁사 품질 점검용으로 분리했습니다.
-      실제 손실금액은 원가·배송비·리퍼 비용 데이터가 없으므로, 본 대시보드는 손실 처리 건수를 기준으로 우선순위를 제시합니다.
-    </p>
-  </section>
-</main>
-</body>
+        <div class="vendor-rate-compare">
+          <div class="vendor-rate-head">
+            <div>
+              <h4>위탁사별 로트 불합격률·입고 불량률 비교</h4>
+              <p>
+                왼쪽 축은 로트 불합격률, 오른쪽 축은 입고 불량률 기준입니다.
+                x축에는 두 지표를 구분하고, 각 지표 안에서 위탁사별 색상으로
+                비교했습니다.
+              </p>
+            </div>
+            <div class="vendor-rate-legend" aria-label="위탁사 색상 범례">
+              <span class="vendor-a"><i></i>A정밀</span>
+              <span class="vendor-b"><i></i>B사운드</span>
+              <span class="vendor-c"><i></i>C전자</span>
+            </div>
+          </div>
+          <div class="vendor-dual-chart-wrap">
+            <svg
+              class="vendor-dual-chart"
+              viewBox="0 0 820 390"
+              role="img"
+              aria-label="위탁사별 로트 불합격률과 입고 불량률 비교 그래프"
+            >
+              <line class="grid-line" x1="92" y1="298" x2="748" y2="298"></line>
+              <line
+                class="grid-line"
+                x1="92"
+                y1="224.25"
+                x2="748"
+                y2="224.25"
+              ></line>
+              <line
+                class="grid-line"
+                x1="92"
+                y1="150.5"
+                x2="748"
+                y2="150.5"
+              ></line>
+              <line
+                class="grid-line"
+                x1="92"
+                y1="76.75"
+                x2="748"
+                y2="76.75"
+              ></line>
+              <line
+                class="right-grid-line"
+                x1="92"
+                y1="203.6"
+                x2="748"
+                y2="203.6"
+              ></line>
+              <line
+                class="right-grid-line"
+                x1="92"
+                y1="109.2"
+                x2="748"
+                y2="109.2"
+              ></line>
+
+              <line class="axis-line" x1="92" y1="52" x2="92" y2="298"></line>
+              <line class="axis-line" x1="748" y1="52" x2="748" y2="298"></line>
+              <line class="axis-line" x1="92" y1="298" x2="748" y2="298"></line>
+
+              <text class="tick" x="80" y="302" text-anchor="end">0%</text>
+              <text class="tick" x="80" y="228.25" text-anchor="end">5%</text>
+              <text class="tick" x="80" y="154.5" text-anchor="end">10%</text>
+              <text class="tick" x="80" y="80.75" text-anchor="end">15%</text>
+              <text
+                class="axis-title"
+                x="27"
+                y="175"
+                text-anchor="middle"
+                transform="rotate(-90 27 175)"
+              >
+                로트 불합격률(%)
+              </text>
+
+              <text class="tick" x="760" y="302">0%</text>
+              <text class="tick" x="760" y="207.6">1%</text>
+              <text class="tick" x="760" y="113.2">2%</text>
+              <text class="tick" x="760" y="66">2.5%</text>
+              <text
+                class="axis-title"
+                x="800"
+                y="175"
+                text-anchor="middle"
+                transform="rotate(90 800 175)"
+              >
+                입고 불량률(%)
+              </text>
+
+              <text class="metric-caption" x="250" y="38" text-anchor="middle">
+                왼쪽 축 기준
+              </text>
+              <text class="metric-caption" x="585" y="38" text-anchor="middle">
+                오른쪽 축 기준
+              </text>
+
+              <rect
+                class="vendor-bar-a tooltip-trigger"
+                x="178"
+                y="80.41"
+                width="46"
+                height="217.59"
+                rx="8"
+                data-tooltip="A정밀 로트 불합격률: 14.75% · 9건/61건"
+              ></rect>
+              <rect
+                class="vendor-bar-b tooltip-trigger"
+                x="237"
+                y="236.49"
+                width="46"
+                height="61.51"
+                rx="8"
+                data-tooltip="B사운드 로트 불합격률: 4.17% · 5건/120건"
+              ></rect>
+              <rect
+                class="vendor-bar-c tooltip-trigger"
+                x="296"
+                y="285.61"
+                width="46"
+                height="12.39"
+                rx="6"
+                data-tooltip="C전자 로트 불합격률: 0.84% · 1건/119건"
+              ></rect>
+              <text class="bar-value" x="201" y="72.41" text-anchor="middle">
+                14.75%
+              </text>
+              <text class="bar-value" x="260" y="228.49" text-anchor="middle">
+                4.17%
+              </text>
+              <text class="bar-value" x="319" y="277.61" text-anchor="middle">
+                0.84%
+              </text>
+
+              <rect
+                class="vendor-bar-a tooltip-trigger"
+                x="513"
+                y="87.49"
+                width="46"
+                height="210.51"
+                rx="8"
+                data-tooltip="A정밀 입고 불량률: 2.23% · 125개/5,600개"
+              ></rect>
+              <rect
+                class="vendor-bar-b tooltip-trigger"
+                x="572"
+                y="128.08"
+                width="46"
+                height="169.92"
+                rx="8"
+                data-tooltip="B사운드 입고 불량률: 1.80% · 229개/12,750개"
+              ></rect>
+              <rect
+                class="vendor-bar-c tooltip-trigger"
+                x="631"
+                y="152.62"
+                width="46"
+                height="145.38"
+                rx="8"
+                data-tooltip="C전자 입고 불량률: 1.54% · 204개/13,250개"
+              ></rect>
+              <text class="bar-value" x="536" y="79.49" text-anchor="middle">
+                2.23%
+              </text>
+              <text class="bar-value" x="595" y="120.08" text-anchor="middle">
+                1.80%
+              </text>
+              <text class="bar-value" x="654" y="144.62" text-anchor="middle">
+                1.54%
+              </text>
+
+              <text class="x-label" x="260" y="335" text-anchor="middle">
+                로트 불합격률
+              </text>
+              <text class="x-label" x="595" y="335" text-anchor="middle">
+                입고 불량률
+              </text>
+              <text class="tick" x="201" y="360" text-anchor="middle">
+                A정밀
+              </text>
+              <text class="tick" x="260" y="360" text-anchor="middle">
+                B사운드
+              </text>
+              <text class="tick" x="319" y="360" text-anchor="middle">
+                C전자
+              </text>
+              <text class="tick" x="536" y="360" text-anchor="middle">
+                A정밀
+              </text>
+              <text class="tick" x="595" y="360" text-anchor="middle">
+                B사운드
+              </text>
+              <text class="tick" x="654" y="360" text-anchor="middle">
+                C전자
+              </text>
+            </svg>
+          </div>
+          <p class="vendor-rate-note">
+            A정밀은 로트 불합격률과 입고 불량률이 모두 가장 높습니다. 특히 로트
+            불합격률은 입고 불량률보다 격차가 크게 나타나, 로트 단위 검사 결과와
+            반복 불합격 이력을 함께 확인할 필요가 있습니다.
+          </p>
+        </div>
+
+        <div class="subsection">
+          <h3>위탁사별 주요 불량유형 분포</h3>
+          <p class="desc">
+            불량 상세 데이터 기준으로, 위탁사별 상위 불량유형 3개를 표시하고
+            나머지는 기타로 묶었습니다. 제품군과 위탁사가 함께 묶여 있으므로
+            제품 특성도 같이 고려해야 합니다.
+          </p>
+          <div class="vendor-pie-grid">
+            <div class="vendor-pie-card focus">
+              <div class="vendor-pie-head">
+                <div>
+                  <strong>A정밀</strong>
+                  <span>불량 상세 125건 · 상위 3개 유형 + 기타</span>
+                </div>
+              </div>
+              <div class="vendor-pie-body">
+                <svg
+                  class="vendor-pie-svg"
+                  viewBox="0 0 220 220"
+                  role="img"
+                  aria-label="A정밀 주요 불량유형 원그래프"
+                >
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 110.0 22.0 A 88.0 88.0 0 1 1 103.4 197.7 Z"
+                    fill="#2f6fed"
+                    data-tooltip="페어링모듈: 64건 · 51.20%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 103.4 197.7 A 88.0 88.0 0 0 1 31.3 70.5 Z"
+                    fill="#e69a2c"
+                    data-tooltip="배터리: 39건 · 31.20%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 31.3 70.5 A 88.0 88.0 0 0 1 56.5 40.1 Z"
+                    fill="#d92d20"
+                    data-tooltip="납땜불량: 9건 · 7.20%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 56.5 40.1 A 88.0 88.0 0 0 1 110.0 22.0 Z"
+                    fill="#94a3b8"
+                    data-tooltip="기타: 13건 · 10.40%"
+                  ></path>
+                </svg>
+                <div class="vendor-pie-legend">
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="페어링모듈: 64건 · 51.20%"
+                  >
+                    <i style="background: #2f6fed"></i>
+                    <span>페어링모듈</span>
+                    <b>64건 · 51.20%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="배터리: 39건 · 31.20%"
+                  >
+                    <i style="background: #e69a2c"></i>
+                    <span>배터리</span>
+                    <b>39건 · 31.20%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="납땜불량: 9건 · 7.20%"
+                  >
+                    <i style="background: #d92d20"></i>
+                    <span>납땜불량</span>
+                    <b>9건 · 7.20%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="기타: 13건 · 10.40%"
+                  >
+                    <i style="background: #94a3b8"></i>
+                    <span>기타</span>
+                    <b>13건 · 10.40%</b>
+                  </div>
+                </div>
+              </div>
+              <p class="vendor-pie-note">
+                TWS 계열 중심으로 페어링모듈·배터리 점검 필요
+              </p>
+            </div>
+            <div class="vendor-pie-card">
+              <div class="vendor-pie-head">
+                <div>
+                  <strong>B사운드</strong>
+                  <span>불량 상세 229건 · 상위 3개 유형 + 기타</span>
+                </div>
+              </div>
+              <div class="vendor-pie-body">
+                <svg
+                  class="vendor-pie-svg"
+                  viewBox="0 0 220 220"
+                  role="img"
+                  aria-label="B사운드 주요 불량유형 원그래프"
+                >
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 110.0 22.0 A 88.0 88.0 0 0 1 178.5 165.3 Z"
+                    fill="#2f6fed"
+                    data-tooltip="페어링모듈: 82건 · 35.81%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 178.5 165.3 A 88.0 88.0 0 0 1 63.1 184.4 Z"
+                    fill="#e69a2c"
+                    data-tooltip="배터리: 53건 · 23.14%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 63.1 184.4 A 88.0 88.0 0 0 1 24.2 90.3 Z"
+                    fill="#d92d20"
+                    data-tooltip="납땜불량: 45건 · 19.65%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 24.2 90.3 A 88.0 88.0 0 0 1 110.0 22.0 Z"
+                    fill="#94a3b8"
+                    data-tooltip="기타: 49건 · 21.40%"
+                  ></path>
+                </svg>
+                <div class="vendor-pie-legend">
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="페어링모듈: 82건 · 35.81%"
+                  >
+                    <i style="background: #2f6fed"></i>
+                    <span>페어링모듈</span>
+                    <b>82건 · 35.81%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="배터리: 53건 · 23.14%"
+                  >
+                    <i style="background: #e69a2c"></i>
+                    <span>배터리</span>
+                    <b>53건 · 23.14%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="납땜불량: 45건 · 19.65%"
+                  >
+                    <i style="background: #d92d20"></i>
+                    <span>납땜불량</span>
+                    <b>45건 · 19.65%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="기타: 49건 · 21.40%"
+                  >
+                    <i style="background: #94a3b8"></i>
+                    <span>기타</span>
+                    <b>49건 · 21.40%</b>
+                  </div>
+                </div>
+              </div>
+              <p class="vendor-pie-note">
+                AIR/BONE 계열의 착용·연결·품질 이슈 분리 필요
+              </p>
+            </div>
+            <div class="vendor-pie-card">
+              <div class="vendor-pie-head">
+                <div>
+                  <strong>C전자</strong>
+                  <span>불량 상세 204건 · 상위 3개 유형 + 기타</span>
+                </div>
+              </div>
+              <div class="vendor-pie-body">
+                <svg
+                  class="vendor-pie-svg"
+                  viewBox="0 0 220 220"
+                  role="img"
+                  aria-label="C전자 주요 불량유형 원그래프"
+                >
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 110.0 22.0 A 88.0 88.0 0 0 1 160.8 181.8 Z"
+                    fill="#2f6fed"
+                    data-tooltip="납땜불량: 82건 · 40.20%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 160.8 181.8 A 88.0 88.0 0 0 1 66.0 186.2 Z"
+                    fill="#e69a2c"
+                    data-tooltip="배터리: 37건 · 18.14%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 66.0 186.2 A 88.0 88.0 0 0 1 22.2 104.6 Z"
+                    fill="#d92d20"
+                    data-tooltip="페어링모듈: 36건 · 17.65%"
+                  ></path>
+                  <path
+                    class="tooltip-trigger"
+                    d="M 110.0 110.0 L 22.2 104.6 A 88.0 88.0 0 0 1 110.0 22.0 Z"
+                    fill="#94a3b8"
+                    data-tooltip="기타: 49건 · 24.02%"
+                  ></path>
+                </svg>
+                <div class="vendor-pie-legend">
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="납땜불량: 82건 · 40.20%"
+                  >
+                    <i style="background: #2f6fed"></i>
+                    <span>납땜불량</span>
+                    <b>82건 · 40.20%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="배터리: 37건 · 18.14%"
+                  >
+                    <i style="background: #e69a2c"></i>
+                    <span>배터리</span>
+                    <b>37건 · 18.14%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="페어링모듈: 36건 · 17.65%"
+                  >
+                    <i style="background: #d92d20"></i>
+                    <span>페어링모듈</span>
+                    <b>36건 · 17.65%</b>
+                  </div>
+                  <div
+                    class="vendor-pie-legend-row tooltip-trigger"
+                    data-tooltip="기타: 49건 · 24.02%"
+                  >
+                    <i style="background: #94a3b8"></i>
+                    <span>기타</span>
+                    <b>49건 · 24.02%</b>
+                  </div>
+                </div>
+              </div>
+              <p class="vendor-pie-note">
+                스피커·헤드셋 계열에서 납땜/외관 공정 관리 확인
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection two-col-note">
+          <div class="plain-card">
+            <b>로트 분석을 위탁사 품질로 연결하는 이유</b>
+            <p>
+              반품 데이터의 로트번호는 위탁사 패턴과 연결됩니다. 따라서
+              발표에서는 개별 로트 번호를 모두 나열하기보다, 제품 × 위탁사
+              단위로 문제 위치를 요약하는 방식이 더 이해하기 쉽습니다.
+            </p>
+          </div>
+          <div class="plain-card">
+            <b>단정하지 않아야 할 부분</b>
+            <p>
+              A정밀 지표가 높게 보이더라도 TWS 계열 생산분이 A정밀에 집중되어
+              있습니다. 위탁사 단독 문제가 아니라 제품 특성, 신제품 사용성,
+              페어링 안내 부족 가능성을 함께 봐야 합니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="note-box" style="margin-top: 16px">
+          <strong>해석 주의</strong><br />
+          A정밀은 위탁사 중 입고 불량률이 가장 높고, 불합격이 발생한 로트 수
+          또한 가장 많습니다. 다만 TWS 계열 생산분이 A정밀에 집중되어 있으므로
+          “A정밀 자체가 문제”라고 단정하기보다, A정밀에서 생산된 TWS 계열 로트와
+          페어링모듈·배터리 관련 공정 점검이 필요하다고 해석하는 것이
+          안전합니다.
+        </div>
+      </section>
+
+      <section class="section tab-panel" id="action" role="tabpanel">
+        <div class="section-title">
+          <div>
+            <h2>5. 개선 과제</h2>
+            <p class="desc">
+              분석 결과를 부서별 실행 과제로 나눠, 각 팀이 바로 확인할 액션만
+              간단히 정리했습니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="action-brief">
+          <article class="action-card marketing">
+            <div class="action-card-head">
+              <div class="action-card-title">
+                <span class="area-label">상세페이지 콘텐츠</span>
+                <h3>연결·페어링 안내 강화</h3>
+              </div>
+              <span class="team-pill">마케팅/디자인팀</span>
+            </div>
+            <div class="action-problem">
+              <b>확인된 문제</b>
+              <p>
+                TWS-300에서 연결·페어링 관련 리뷰와 CS 문의가 반복적으로 나타남
+              </p>
+            </div>
+            <div>
+              <p class="action-list-title">액션 아이템</p>
+              <ul class="action-list">
+                <li>상세페이지 상단에 멀티포인트 연결법 요약 배치</li>
+                <li>
+                  초기화 방법, 한쪽만 들릴 때 조치법을 이미지형 FAQ로 제작
+                </li>
+                <li>구매 전 확인이 필요한 연결 조건을 카드형 안내로 정리</li>
+              </ul>
+            </div>
+            <div class="action-metrics">
+              <b>확인 지표</b>
+              <div class="metric-chips">
+                <span class="metric-chip">연결·페어링 리뷰 불만</span>
+                <span class="metric-chip">상세페이지 FAQ 클릭</span>
+                <span class="metric-chip">TWS-300 반품률</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="action-card cs">
+            <div class="action-card-head">
+              <div class="action-card-title">
+                <span class="area-label">CS·운영</span>
+                <h3>반품 전 자가진단 운영</h3>
+              </div>
+              <span class="team-pill">CS/운영팀</span>
+            </div>
+            <div class="action-problem">
+              <b>확인된 문제</b>
+              <p>
+                연결·페어링 문의와 작동·연결 불량 반품이 함께 발생해 접수 전
+                안내가 필요함
+              </p>
+            </div>
+            <div>
+              <p class="action-list-title">액션 아이템</p>
+              <ul class="action-list">
+                <li>반품 접수 전 30초 자가진단 체크리스트 안내</li>
+                <li>페어링·리셋 안내 답변 매크로를 CS 채널에 적용</li>
+                <li>동일 문의가 반복되는 월에는 안내 문구를 즉시 보완</li>
+              </ul>
+            </div>
+            <div class="action-metrics">
+              <b>확인 지표</b>
+              <div class="metric-chips">
+                <span class="metric-chip">연결·페어링 CS 건수</span>
+                <span class="metric-chip">작동·연결 반품건수</span>
+                <span class="metric-chip">이상 없음 반품 비중</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="action-card quality">
+            <div class="action-card-head">
+              <div class="action-card-title">
+                <span class="area-label">품질·위탁사</span>
+                <h3>A정밀/TWS 계열 점검</h3>
+              </div>
+              <span class="team-pill">품질/기획팀</span>
+            </div>
+            <div class="action-problem">
+              <b>확인된 문제</b>
+              <p>
+                A정밀의 로트 불합격률과 입고 불량률이 상대적으로 높게 나타남
+              </p>
+            </div>
+            <div>
+              <p class="action-list-title">액션 아이템</p>
+              <ul class="action-list">
+                <li>A정밀 TWS 계열 로트의 페어링모듈·배터리 공정 점검</li>
+                <li>불합격 발생 로트의 후속 검사 및 개선 여부 확인</li>
+                <li>신제품 초기 생산분은 입고검사 기준을 우선 점검</li>
+              </ul>
+            </div>
+            <div class="action-metrics">
+              <b>확인 지표</b>
+              <div class="metric-chips">
+                <span class="metric-chip">로트 불합격률</span>
+                <span class="metric-chip">입고 불량률</span>
+                <span class="metric-chip">동일 로트 반품건수</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="action-summary-note">
+          <strong>실행 우선순위:</strong> 먼저 TWS-300 연결·페어링 안내를
+          보강하고, CS 접수 단계에서 자가진단을 적용한 뒤, A정밀 TWS 계열 로트의
+          품질 지표가 함께 낮아지는지 확인합니다.
+        </div>
+
+        <div class="cs-draft-section">
+          <div class="cs-draft-head">
+            <div>
+              <h3>반복 CS 문의 응대 초안</h3>
+              <p>
+                CS에서 반복적으로 나타난 3가지 문의 유형에 대해, 바로 응대에
+                활용할 수 있는 짧은 답변 초안입니다.
+              </p>
+            </div>
+            <span class="cs-draft-badge">CS/운영팀 활용</span>
+          </div>
+
+          <div class="cs-draft-grid">
+            <article class="cs-draft-card connect">
+              <div class="cs-draft-type">
+                <h4>연결·페어링 문의</h4>
+                <span class="cs-draft-count">80건</span>
+              </div>
+              <div>
+                <p class="cs-draft-label">응대 초안</p>
+                <p class="cs-draft-text">
+                  불편을 드려 죄송합니다. 먼저 휴대폰 블루투스 목록에서 기존
+                  연결 기록을 삭제한 뒤, 이어폰을 충전 케이스에 넣고 초기화 후
+                  다시 연결해 주세요. 멀티포인트 사용 중이라면 기존 연결 기기 중
+                  하나를 해제한 뒤 재연결을 권장드립니다. 동일 증상이 계속되면
+                  사용 기기명과 증상 화면을 함께 보내주시면 추가 확인하겠습니다.
+                </p>
+              </div>
+              <div class="cs-draft-check">
+                <p class="cs-draft-label">확인 필요 정보</p>
+                <span>사용 기기</span><span>블루투스 상태</span
+                ><span>초기화 여부</span>
+              </div>
+            </article>
+
+            <article class="cs-draft-card usage">
+              <div class="cs-draft-type">
+                <h4>사용법·설정 문의</h4>
+                <span class="cs-draft-count">56건</span>
+              </div>
+              <div>
+                <p class="cs-draft-label">응대 초안</p>
+                <p class="cs-draft-text">
+                  문의 주셔서 감사합니다. 제품 사용 전 이어폰을 충분히 충전한 뒤
+                  전원을 켜고, 사용하시는 기기의 블루투스 설정에서 제품명을
+                  선택해 주세요. 버튼 조작, 초기화, 멀티포인트 설정은 사용
+                  환경에 따라 단계가 달라질 수 있어 필요한 기능을 알려주시면
+                  해당 방법을 순서대로 안내드리겠습니다.
+                </p>
+              </div>
+              <div class="cs-draft-check">
+                <p class="cs-draft-label">확인 필요 정보</p>
+                <span>문의 기능</span><span>제품 모델</span
+                ><span>사용 환경</span>
+              </div>
+            </article>
+
+            <article class="cs-draft-card return">
+              <div class="cs-draft-type">
+                <h4>반품·교환 요청</h4>
+                <span class="cs-draft-count">51건</span>
+              </div>
+              <div>
+                <p class="cs-draft-label">응대 초안</p>
+                <p class="cs-draft-text">
+                  불편을 드려 죄송합니다. 빠른 처리를 위해 주문번호, 구매처,
+                  제품 모델명과 함께 증상이 확인되는 사진 또는 영상을
+                  보내주세요. 제품 상태 확인 후 교환 또는 반품 가능 여부를
+                  안내드리겠습니다. 단순 연결 문제의 경우 먼저 초기화와 재연결
+                  안내를 드린 뒤에도 동일하면 접수를 도와드리겠습니다.
+                </p>
+              </div>
+              <div class="cs-draft-check">
+                <p class="cs-draft-label">확인 필요 정보</p>
+                <span>주문번호</span><span>구매처</span><span>증상 자료</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section tab-panel" id="data-browser" role="tabpanel">
+        <div class="section-title">
+          <div>
+            <h2>6. 데이터 구조 예시 브라우저</h2>
+            <p class="desc">
+              분석에 사용한 원본 데이터의 구조를 빠르게 확인할 수 있도록, 데이터
+              세트별 대표 행을 일부만 보여줍니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="data-browser-wrap">
+          <div class="data-browser-head">
+            <div>
+              <h3 id="datasetTitle">데이터 세트 선택</h3>
+              <p>
+                아래 선택창에서 데이터 세트를 바꾸면, 해당 데이터의 주요 컬럼과
+                예시 행을 확인할 수 있습니다. 표본 행은 전체 데이터 계산값을
+                대체하지 않는 참고용입니다.
+              </p>
+              <div class="dataset-meta-row">
+                <span class="dataset-chip" id="datasetTotal">총 -행</span>
+                <span class="dataset-chip" id="datasetSampleCount"
+                  >예시 -행</span
+                >
+              </div>
+            </div>
+            <div class="dataset-select-box">
+              <label for="datasetSelect">데이터 세트</label>
+              <select id="datasetSelect" aria-label="데이터 세트 선택">
+                <option value="reviews">리뷰 데이터 (reviews)</option>
+                <option value="cs_log">고객 문의 로그 (cs_log)</option>
+                <option value="monthly_sales">
+                  월별 판매 집계 (monthly_sales)
+                </option>
+                <option value="incoming_inspection">
+                  입고 검사 대장 (incoming_inspection)
+                </option>
+                <option value="return_inspection">
+                  반품 검사 대장 (return_inspection)
+                </option>
+                <option value="defect_detail">
+                  공정 불량 상세 (defect_detail)
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="dataset-desc-card" id="datasetDesc"></div>
+          <div class="data-table-shell" id="datasetTableShell"></div>
+          <div class="data-browser-foot">
+            <span
+              >※ 리뷰 데이터는 내용이 겹치지 않도록 추출하고, 긍정·부정 리뷰를
+              함께 배치했습니다.</span
+            >
+            <span
+              >※ CS 데이터는 문의유형이 골고루 보이도록 대표 사례를
+              추출했습니다.</span
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div
+      id="dashboardTooltip"
+      class="dashboard-tooltip"
+      aria-hidden="true"
+    ></div>
+
+    <script>
+      const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+      const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
+
+      function openDashboardTab(tabId) {
+        tabPanels.forEach((panel) => {
+          const isActive = panel.id === tabId;
+          panel.classList.toggle("active", isActive);
+          panel.setAttribute("aria-hidden", String(!isActive));
+        });
+        tabButtons.forEach((button) => {
+          const isActive = button.dataset.tab === tabId;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-selected", String(isActive));
+        });
+        const nav = document.querySelector(".tab-nav");
+        const navHeight = nav ? nav.offsetHeight : 0;
+        window.scrollTo({
+          top: Math.max(
+            0,
+            document.querySelector("main").offsetTop - navHeight - 8,
+          ),
+          behavior: "smooth",
+        });
+      }
+
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () =>
+          openDashboardTab(button.dataset.tab),
+        );
+      });
+
+      window.addEventListener("DOMContentLoaded", () => {
+        tabPanels.forEach((panel) =>
+          panel.setAttribute(
+            "aria-hidden",
+            String(!panel.classList.contains("active")),
+          ),
+        );
+      });
+
+      const dashboardTooltip = document.getElementById("dashboardTooltip");
+      const tooltipTriggers = Array.from(
+        document.querySelectorAll("[data-tooltip]"),
+      );
+
+      function formatTooltipContent(text) {
+        const parts = String(text || "").split(":");
+        if (parts.length === 1)
+          return `<span class="tip-title">${parts[0]}</span>`;
+        const title = parts.shift().trim();
+        const detail = parts.join(":").trim();
+        return `<span class="tip-title">${title}</span><span>${detail}</span>`;
+      }
+
+      function moveDashboardTooltip(event) {
+        if (
+          !dashboardTooltip ||
+          !dashboardTooltip.classList.contains("visible")
+        )
+          return;
+        const offset = 14;
+        const rect = dashboardTooltip.getBoundingClientRect();
+        let left = event.clientX + offset;
+        let top = event.clientY - rect.height - offset;
+        if (left + rect.width > window.innerWidth - 12)
+          left = event.clientX - rect.width - offset;
+        if (top < 12) top = event.clientY + offset;
+        dashboardTooltip.style.left = `${left}px`;
+        dashboardTooltip.style.top = `${top}px`;
+      }
+
+      tooltipTriggers.forEach((el) => {
+        el.addEventListener("mouseenter", (event) => {
+          if (!dashboardTooltip) return;
+          dashboardTooltip.innerHTML = formatTooltipContent(el.dataset.tooltip);
+          dashboardTooltip.classList.add("visible");
+          dashboardTooltip.setAttribute("aria-hidden", "false");
+          moveDashboardTooltip(event);
+        });
+        el.addEventListener("mousemove", moveDashboardTooltip);
+        el.addEventListener("mouseleave", () => {
+          if (!dashboardTooltip) return;
+          dashboardTooltip.classList.remove("visible");
+          dashboardTooltip.setAttribute("aria-hidden", "true");
+        });
+      });
+
+      const datasetSamples = {
+        monthly_sales: {
+          label: "월별 판매 집계 (monthly_sales)",
+          desc: "채널·모델별 월별 판매수량과 평균판매단가를 확인하는 데이터입니다.",
+          total: 346,
+          columns: [
+            "연월",
+            "채널",
+            "모델코드",
+            "모델명",
+            "정가",
+            "판매수량",
+            "평균판매단가",
+          ],
+          rows: [
+            {
+              연월: "Jul-25",
+              채널: "오픈마켓A",
+              모델코드: "TWS-200",
+              모델명: "완전무선 이어폰 TWS-200",
+              정가: "32000",
+              판매수량: "30",
+              평균판매단가: "30140",
+            },
+            {
+              연월: "Aug-25",
+              채널: "쿠팡",
+              모델코드: "AIR-50",
+              모델명: "공기전도 이어폰 AIR-50",
+              정가: "35000",
+              판매수량: "54",
+              평균판매단가: "32880",
+            },
+            {
+              연월: "Sep-25",
+              채널: "네이버쇼핑",
+              모델코드: "BONE-100",
+              모델명: "골전도 이어폰 BONE-100",
+              정가: "39000",
+              판매수량: "34",
+              평균판매단가: "36670",
+            },
+            {
+              연월: "Oct-25",
+              채널: "자사몰",
+              모델코드: "BONE-200",
+              모델명: "골전도 이어폰 BONE-200(방수)",
+              정가: "55000",
+              판매수량: "14",
+              평균판매단가: "53170",
+            },
+            {
+              연월: "Nov-25",
+              채널: "자사몰",
+              모델코드: "GH-90",
+              모델명: "게이밍 헤드셋 GH-90",
+              정가: "45000",
+              판매수량: "20",
+              평균판매단가: "43110",
+            },
+            {
+              연월: "Nov-25",
+              채널: "오픈마켓A",
+              모델코드: "BOOM-10",
+              모델명: "블루투스 스피커 BOOM-10",
+              정가: "29000",
+              판매수량: "23",
+              평균판매단가: "27410",
+            },
+            {
+              연월: "Dec-25",
+              채널: "쿠팡",
+              모델코드: "SBAR-20",
+              모델명: "사운드바 SBAR-20",
+              정가: "59000",
+              판매수량: "40",
+              평균판매단가: "56180",
+            },
+            {
+              연월: "Feb-26",
+              채널: "자사몰",
+              모델코드: "TWS-300",
+              모델명: "완전무선 이어폰 TWS-300(멀티포인트)",
+              정가: "49000",
+              판매수량: "79",
+              평균판매단가: "42160",
+            },
+          ],
+        },
+        return_inspection: {
+          label: "반품 검사 대장 (return_inspection)",
+          desc: "반품 접수 후 검사판정과 처리결과를 확인하는 데이터입니다.",
+          total: 1196,
+          columns: [
+            "반품ID",
+            "주문일",
+            "반품접수일",
+            "채널",
+            "모델코드",
+            "로트번호",
+            "고객신고사유",
+            "검사판정",
+            "처리결과",
+            "검사소요분",
+          ],
+          rows: [
+            {
+              반품ID: "R26-0001",
+              주문일: "2025-06-20",
+              반품접수일: "2025-07-01",
+              채널: "네이버쇼핑",
+              모델코드: "BONE-100",
+              로트번호: "L2504-B04",
+              고객신고사유: "작동·연결 불량",
+              검사판정: "불량 확인",
+              처리결과: "교환 출고",
+              검사소요분: "28",
+            },
+            {
+              반품ID: "R26-0002",
+              주문일: "2025-06-27",
+              반품접수일: "2025-07-02",
+              채널: "오픈마켓A",
+              모델코드: "TWS-200",
+              로트번호: "L2506-A02",
+              고객신고사유: "단순변심",
+              검사판정: "미개봉",
+              처리결과: "재입고",
+              검사소요분: "8",
+            },
+            {
+              반품ID: "R26-0003",
+              주문일: "2025-06-22",
+              반품접수일: "2025-07-02",
+              채널: "오픈마켓A",
+              모델코드: "BONE-200",
+              로트번호: "L2501-B05",
+              고객신고사유: "착용감·사이즈",
+              검사판정: "이상 없음(재현 불가)",
+              처리결과: "재입고",
+              검사소요분: "25",
+            },
+            {
+              반품ID: "R26-0010",
+              주문일: "2025-06-18",
+              반품접수일: "2025-07-03",
+              채널: "오픈마켓A",
+              모델코드: "BONE-100",
+              로트번호: "L2506-B04",
+              고객신고사유: "음질 불만",
+              검사판정: "이상 없음(재현 불가)",
+              처리결과: "리퍼 전환",
+              검사소요분: "11",
+            },
+            {
+              반품ID: "R26-0020",
+              주문일: "2025-06-26",
+              반품접수일: "2025-07-09",
+              채널: "자사몰",
+              모델코드: "BOOM-10",
+              로트번호: "L2505-C07",
+              고객신고사유: "오배송",
+              검사판정: "미개봉",
+              처리결과: "재입고",
+              검사소요분: "3",
+            },
+            {
+              반품ID: "R26-0044",
+              주문일: "2025-07-17",
+              반품접수일: "2025-07-25",
+              채널: "네이버쇼핑",
+              모델코드: "BONE-200",
+              로트번호: "L2506-B05",
+              고객신고사유: "파손·외관 불량",
+              검사판정: "외관·고객과실",
+              처리결과: "폐기",
+              검사소요분: "6",
+            },
+            {
+              반품ID: "R26-0521",
+              주문일: "2026-02-01",
+              반품접수일: "2026-02-05",
+              채널: "쿠팡",
+              모델코드: "TWS-300",
+              로트번호: "L2601-A01",
+              고객신고사유: "오배송",
+              검사판정: "미개봉",
+              처리결과: "재입고",
+              검사소요분: "5",
+            },
+            {
+              반품ID: "R26-0525",
+              주문일: "2026-02-05",
+              반품접수일: "2026-02-06",
+              채널: "쿠팡",
+              모델코드: "TWS-300",
+              로트번호: "L2602-A01",
+              고객신고사유: "착용감·사이즈",
+              검사판정: "이상 없음(재현 불가)",
+              처리결과: "리퍼 전환",
+              검사소요분: "8",
+            },
+          ],
+        },
+        cs_log: {
+          label: "고객 문의 로그 (cs_log)",
+          desc: "문의유형이 골고루 보이도록 대표 사례를 추출했습니다.",
+          total: 300,
+          columns: [
+            "문의ID",
+            "문의일",
+            "채널",
+            "모델코드",
+            "문의유형",
+            "문의요약",
+          ],
+          rows: [
+            {
+              문의ID: "C26-0001",
+              문의일: "2025-07-02",
+              채널: "오픈마켓A",
+              모델코드: "BONE-200",
+              문의유형: "사용법·설정",
+              문의요약: "전원 끄는 법을 모르겠다는 문의 (재문의)",
+            },
+            {
+              문의ID: "C26-0002",
+              문의일: "2025-07-03",
+              채널: "쿠팡",
+              모델코드: "BONE-100",
+              문의유형: "A/S 문의",
+              문의요약: "수리 기간 문의",
+            },
+            {
+              문의ID: "C26-0003",
+              문의일: "2025-07-05",
+              채널: "쿠팡",
+              모델코드: "",
+              문의유형: "반품·교환 요청",
+              문의요약: "채팅 상담 — 반품 배송비 부담 문의. 안내 완료",
+            },
+            {
+              문의ID: "C26-0004",
+              문의일: "2025-07-06",
+              채널: "자사몰",
+              모델코드: "AIR-50",
+              문의유형: "배송 문의",
+              문의요약: "톡 문의 — 배송지 변경 요청 (재문의)",
+            },
+            {
+              문의ID: "C26-0005",
+              문의일: "2025-07-07",
+              채널: "쿠팡",
+              모델코드: "GH-90",
+              문의유형: "기타",
+              문의요약: "재입고 일정 문의",
+            },
+            {
+              문의ID: "C26-0006",
+              문의일: "2025-07-07",
+              채널: "자사몰",
+              모델코드: "BONE-200",
+              문의유형: "연결·페어링",
+              문의요약: "케이스에서 꺼내도 연결이 안 된다고 함",
+            },
+            {
+              문의ID: "C26-0007",
+              문의일: "2025-07-09",
+              채널: "쿠팡",
+              모델코드: "BONE-100",
+              문의유형: "A/S 문의",
+              문의요약: "보증기간 문의",
+            },
+            {
+              문의ID: "C26-0009",
+              문의일: "2025-07-10",
+              채널: "네이버쇼핑",
+              모델코드: "AIR-50",
+              문의유형: "사용법·설정",
+              문의요약: "전화 인입 — 이퀄라이저 앱 설정 문의. 매뉴얼 링크 전달",
+            },
+          ],
+        },
+        reviews: {
+          label: "리뷰 데이터 (reviews)",
+          desc: "리뷰 내용이 겹치지 않도록 하고, 긍정·부정 리뷰를 함께 볼 수 있게 추출했습니다.",
+          total: 512,
+          columns: [
+            "리뷰ID",
+            "작성일",
+            "모델코드",
+            "색상",
+            "별점",
+            "리뷰내용",
+            "사진유무",
+            "판매자답변유무",
+            "중복노출",
+          ],
+          rows: [
+            {
+              리뷰ID: "V26-0001",
+              작성일: "2025-07-01",
+              모델코드: "TWS-200",
+              색상: "블랙",
+              별점: "5",
+              리뷰내용: "가족이 쓰려고 샀어요 가성비 좋아서 재구매 별점 드려요",
+              사진유무: "0",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0002",
+              작성일: "2025-07-02",
+              모델코드: "BONE-100",
+              색상: "블랙",
+              별점: "4",
+              리뷰내용: "고민하다 샀는데 주문하니 다음날 바로 왔어요",
+              사진유무: "1",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0003",
+              작성일: "2025-07-02",
+              모델코드: "BONE-200",
+              색상: "블랙",
+              별점: "5",
+              리뷰내용: "리뷰 보고 샀는데 비싼 거 안 부럽네요",
+              사진유무: "1",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0004",
+              작성일: "2025-07-02",
+              모델코드: "AIR-50",
+              색상: "화이트",
+              별점: "5",
+              리뷰내용: "소리 선명하고 깨끗하네요 잘 샀어요",
+              사진유무: "1",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0005",
+              작성일: "2025-07-03",
+              모델코드: "BONE-100",
+              색상: "화이트",
+              별점: "1",
+              리뷰내용: "귀에 잘 안 맞아요",
+              사진유무: "0",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0011",
+              작성일: "2025-07-08",
+              모델코드: "AIR-50",
+              색상: "화이트",
+              별점: "1",
+              리뷰내용: "너무 음질이 기대보다 별로예요 별로네요",
+              사진유무: "1",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0014",
+              작성일: "2025-07-10",
+              모델코드: "SBAR-20",
+              색상: "블랙",
+              별점: "3",
+              리뷰내용:
+                "가성비 최고입니다 한 가지 흠은 블루투스 목록에 안 떠요",
+              사진유무: "0",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+            {
+              리뷰ID: "V26-0022",
+              작성일: "2025-07-16",
+              모델코드: "GH-90",
+              색상: "블랙",
+              별점: "3",
+              리뷰내용: "가성비템 인정합니다 근데 음질이 기대보다 별로예요",
+              사진유무: "1",
+              판매자답변유무: "1",
+              중복노출: "0",
+            },
+          ],
+        },
+        incoming_inspection: {
+          label: "입고 검사 대장 (incoming_inspection)",
+          desc: "위탁사별 입고검사, 검사차수, 합격여부를 확인하는 데이터입니다.",
+          total: 300,
+          columns: [
+            "검사ID",
+            "입고번호",
+            "입고일",
+            "모델코드",
+            "로트번호",
+            "위탁사",
+            "검사차수",
+            "검사수량",
+            "불량수량",
+            "불량률",
+            "합격여부",
+          ],
+          rows: [
+            {
+              검사ID: "Q26-0001",
+              입고번호: "IN26-0001",
+              입고일: "2025-07-03",
+              모델코드: "AIR-50",
+              로트번호: "L2507-B03",
+              위탁사: "B사운드",
+              검사차수: "1",
+              검사수량: "50",
+              불량수량: "1",
+              불량률: "2.0",
+              합격여부: "합격",
+            },
+            {
+              검사ID: "Q26-0002",
+              입고번호: "IN26-0002",
+              입고일: "2025-07-07",
+              모델코드: "BONE-100",
+              로트번호: "L2507-B04",
+              위탁사: "B사운드",
+              검사차수: "1",
+              검사수량: "50",
+              불량수량: "0",
+              불량률: "0.0",
+              합격여부: "합격",
+            },
+            {
+              검사ID: "Q26-0003",
+              입고번호: "IN26-0003",
+              입고일: "2025-07-07",
+              모델코드: "SBAR-20",
+              로트번호: "L2507-C08",
+              위탁사: "C전자",
+              검사차수: "1",
+              검사수량: "50",
+              불량수량: "1",
+              불량률: "2.0",
+              합격여부: "합격",
+            },
+            {
+              검사ID: "Q26-0004",
+              입고번호: "IN26-0004",
+              입고일: "2025-07-07",
+              모델코드: "AIR-50",
+              로트번호: "L2507-B03",
+              위탁사: "B사운드",
+              검사차수: "2",
+              검사수량: "200",
+              불량수량: "5",
+              불량률: "2.5",
+              합격여부: "합격",
+            },
+            {
+              검사ID: "Q26-0008",
+              입고번호: "IN26-0008",
+              입고일: "2025-07-14",
+              모델코드: "TWS-200",
+              로트번호: "L2507-A02",
+              위탁사: "A정밀",
+              검사차수: "1",
+              검사수량: "150",
+              불량수량: "2",
+              불량률: "1.33",
+              합격여부: "합격",
+            },
+            {
+              검사ID: "Q26-0014",
+              입고번호: "IN26-0014",
+              입고일: "2025-07-18",
+              모델코드: "BONE-100",
+              로트번호: "L2507-B04",
+              위탁사: "B사운드",
+              검사차수: "3",
+              검사수량: "50",
+              불량수량: "3",
+              불량률: "6.0",
+              합격여부: "불합격",
+            },
+            {
+              검사ID: "Q26-0020",
+              입고번호: "IN26-0020",
+              입고일: "2025-07-22",
+              모델코드: "TWS-200",
+              로트번호: "L2507-A02",
+              위탁사: "A정밀",
+              검사차수: "4",
+              검사수량: "50",
+              불량수량: "3",
+              불량률: "6.0",
+              합격여부: "불합격",
+            },
+            {
+              검사ID: "Q26-0120",
+              입고번호: "IN26-0120",
+              입고일: "2025-12-02",
+              모델코드: "SBAR-20",
+              로트번호: "L2512-C08",
+              위탁사: "C전자",
+              검사차수: "1",
+              검사수량: "50",
+              불량수량: "3",
+              불량률: "6.0",
+              합격여부: "불합격",
+            },
+          ],
+        },
+        defect_detail: {
+          label: "공정 불량 상세 (defect_detail)",
+          desc: "검사ID와 연결되는 불량유형 상세 데이터입니다.",
+          total: 558,
+          columns: [
+            "불량ID",
+            "검사ID",
+            "입고일",
+            "모델코드",
+            "로트번호",
+            "위탁사",
+            "불량유형",
+          ],
+          rows: [
+            {
+              불량ID: "D26-00001",
+              검사ID: "Q26-0001",
+              입고일: "2025-07-03",
+              모델코드: "AIR-50",
+              로트번호: "L2507-B03",
+              위탁사: "B사운드",
+              불량유형: "납땜불량",
+            },
+            {
+              불량ID: "D26-00002",
+              검사ID: "Q26-0003",
+              입고일: "2025-07-07",
+              모델코드: "SBAR-20",
+              로트번호: "L2507-C08",
+              위탁사: "C전자",
+              불량유형: "납땜불량",
+            },
+            {
+              불량ID: "D26-00003",
+              검사ID: "Q26-0004",
+              입고일: "2025-07-07",
+              모델코드: "AIR-50",
+              로트번호: "L2507-B03",
+              위탁사: "B사운드",
+              불량유형: "외관",
+            },
+            {
+              불량ID: "D26-00004",
+              검사ID: "Q26-0004",
+              입고일: "2025-07-07",
+              모델코드: "AIR-50",
+              로트번호: "L2507-B03",
+              위탁사: "B사운드",
+              불량유형: "외관",
+            },
+            {
+              불량ID: "D26-00008",
+              검사ID: "Q26-0005",
+              입고일: "2025-07-07",
+              모델코드: "BONE-200",
+              로트번호: "L2507-B05",
+              위탁사: "B사운드",
+              불량유형: "페어링모듈",
+            },
+            {
+              불량ID: "D26-00009",
+              검사ID: "Q26-0005",
+              입고일: "2025-07-07",
+              모델코드: "BONE-200",
+              로트번호: "L2507-B05",
+              위탁사: "B사운드",
+              불량유형: "배터리",
+            },
+            {
+              불량ID: "D26-00014",
+              검사ID: "Q26-0007",
+              입고일: "2025-07-09",
+              모델코드: "BOOM-10",
+              로트번호: "L2507-C07",
+              위탁사: "C전자",
+              불량유형: "포장",
+            },
+            {
+              불량ID: "D26-00027",
+              검사ID: "Q26-0012",
+              입고일: "2025-07-17",
+              모델코드: "TWS-200",
+              로트번호: "L2507-A02",
+              위탁사: "A정밀",
+              불량유형: "기능이상",
+            },
+          ],
+        },
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function renderDatasetBrowser(datasetKey) {
+        const dataset =
+          datasetSamples[datasetKey] || datasetSamples.monthly_sales;
+        const title = document.getElementById("datasetTitle");
+        const total = document.getElementById("datasetTotal");
+        const sampleCount = document.getElementById("datasetSampleCount");
+        const desc = document.getElementById("datasetDesc");
+        const shell = document.getElementById("datasetTableShell");
+        if (!title || !total || !sampleCount || !desc || !shell || !dataset)
+          return;
+
+        title.textContent = dataset.label;
+        total.textContent = `총 ${Number(dataset.total).toLocaleString("ko-KR")}행`;
+        sampleCount.textContent = `예시 ${dataset.rows.length}행`;
+        desc.innerHTML = `<b>데이터 설명</b><br>${escapeHtml(dataset.desc)}`;
+
+        const textCols = new Set([
+          "리뷰내용",
+          "문의요약",
+          "검사메모",
+          "모델명",
+        ]);
+        const thead = dataset.columns
+          .map((col) => `<th>${escapeHtml(col)}</th>`)
+          .join("");
+        const tbody = dataset.rows
+          .map((row) => {
+            return `<tr>${dataset.columns
+              .map((col) => {
+                const cls = textCols.has(col) ? ' class="text-cell"' : "";
+                return `<td${cls}>${escapeHtml(row[col])}</td>`;
+              })
+              .join("")}</tr>`;
+          })
+          .join("");
+
+        shell.innerHTML = `<table class="data-table"><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+      }
+
+      const datasetSelect = document.getElementById("datasetSelect");
+      if (datasetSelect) {
+        datasetSelect.addEventListener("change", (event) =>
+          renderDatasetBrowser(event.target.value),
+        );
+        renderDatasetBrowser(datasetSelect.value);
+      }
+    </script>
+  </body>
 </html>
