@@ -2070,7 +2070,7 @@
         z-index: 1;
         background: #f2f5f8;
         color: #344054;
-        text-align: left;
+        text-align: center;
         padding: 12px 14px;
         border-bottom: 1px solid #d8dee8;
         white-space: nowrap;
@@ -2083,6 +2083,27 @@
       }
       .data-table tbody tr:nth-child(even) td {
         background: #fbfcfd;
+      }
+      .data-table tbody td.col-left {
+        text-align: left;
+      }
+      .data-table tbody td.col-center {
+        text-align: center;
+      }
+      .data-table tbody td.col-right {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .data-table tbody td.col-id {
+        font-weight: 800;
+        color: #17202a;
+      }
+      .data-table tbody td.col-status {
+        font-weight: 800;
+      }
+      .data-table tbody td.col-date,
+      .data-table tbody td.col-code {
+        color: #24364b;
       }
       .data-table .text-cell {
         min-width: 260px;
@@ -5167,6 +5188,65 @@
           "검사메모",
           "모델명",
         ]);
+        const numericCols = new Set([
+          "정가",
+          "판매수량",
+          "평균판매단가",
+          "검사소요분",
+          "별점",
+          "사진유무",
+          "판매자답변유무",
+          "중복노출",
+          "검사차수",
+          "검사수량",
+          "불량수량",
+          "불량률",
+        ]);
+        const idCols = new Set([
+          "리뷰ID",
+          "문의ID",
+          "반품ID",
+          "검사ID",
+          "불량ID",
+          "입고번호",
+        ]);
+        const dateCols = new Set([
+          "연월",
+          "작성일",
+          "문의일",
+          "주문일",
+          "반품접수일",
+          "입고일",
+        ]);
+        const codeCols = new Set([
+          "채널",
+          "모델코드",
+          "색상",
+          "로트번호",
+          "위탁사",
+          "고객신고사유",
+          "검사판정",
+          "처리결과",
+          "문의유형",
+          "합격여부",
+          "불량유형",
+        ]);
+        function getDatasetCellClass(col) {
+          const classes = [];
+          if (textCols.has(col)) {
+            classes.push("col-left", "text-cell");
+          } else if (numericCols.has(col)) {
+            classes.push("col-right");
+          } else {
+            classes.push("col-center");
+          }
+          if (idCols.has(col)) classes.push("col-id");
+          if (dateCols.has(col)) classes.push("col-date");
+          if (codeCols.has(col)) classes.push("col-code");
+          if (["검사판정", "처리결과", "문의유형", "합격여부", "불량유형"].includes(col))
+            classes.push("col-status");
+          return classes.length ? ` class="${classes.join(" ")}"` : "";
+        }
         const thead = dataset.columns
           .map((col) => `<th>${escapeHtml(col)}</th>`)
           .join("");
@@ -5174,7 +5254,7 @@
           .map((row) => {
             return `<tr>${dataset.columns
               .map((col) => {
-                const cls = textCols.has(col) ? ' class="text-cell"' : "";
+                const cls = getDatasetCellClass(col);
                 return `<td${cls}>${escapeHtml(row[col])}</td>`;
               })
               .join("")}</tr>`;
